@@ -5,6 +5,9 @@ local chest = workspace.Finish.Chest
 local player = game.Players.LocalPlayer
 
 
+local btn = game:GetService("StarterGui").HUD.RewardPopup.ClaimButton
+
+
 
 for _, child_folder in ipairs(parent_folder:GetChildren()) do
 	for _, part in ipairs(child_folder:GetDescendants()) do
@@ -17,5 +20,13 @@ for _, child_folder in ipairs(parent_folder:GetChildren()) do
 	end
 end
 
-task.wait(5)
+task.wait(7)
 player.Character:MoveTo(chest.Position)
+
+btn:Activate()
+btn.MouseButton1Click:Fire()
+
+
+
+
+
