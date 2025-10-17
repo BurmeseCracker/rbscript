@@ -1,4 +1,3 @@
-
 local parent_folder = workspace:WaitForChild("segmentSystem")
 
 local chest = workspace.Finish.Chest
