@@ -1,5 +1,11 @@
-task.wait(5);
+
 local parent_folder = workspace:WaitForChild("segmentSystem")
+
+local chest = workspace.Finish.Chest
+
+local player = game.Players.LocalPlayer
+
+
 
 for _, child_folder in ipairs(parent_folder:GetChildren()) do
 	for _, part in ipairs(child_folder:GetDescendants()) do
@@ -11,3 +17,6 @@ for _, child_folder in ipairs(parent_folder:GetChildren()) do
 		end
 	end
 end
+
+task.wait(5)
+player.Character:MoveTo(chest.Position)
