@@ -5,7 +5,9 @@ local chest = workspace.Finish.Chest
 local player = game.Players.LocalPlayer
 
 
-local btn = game:GetService("StarterGui").HUD.RewardPopup.ClaimButton
+local popup = game:GetService("StarterGui").HUD.RewardPopup
+
+
 
 
 
@@ -23,8 +25,13 @@ end
 task.wait(7)
 player.Character:MoveTo(chest.Position)
 
-btn:Activate()
-btn.MouseButton1Click:Fire()
+
+for _, obj in ipairs(popup:GetDescendants()) do
+	if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+		obj:Activate()
+		obj.MouseButton1Click:Fire()
+	end
+end
 
 
 
