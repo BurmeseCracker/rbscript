@@ -5,7 +5,14 @@ local chest = workspace.Finish.Chest
 local player = game.Players.LocalPlayer
 
 
-local popup = game:GetService("StarterGui").HUD.RewardPopup
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+
+
+-- Remote --
+local ClaimReward = ReplicatedStorage.Remotes.ClaimReward -- RemoteEvent 
+
+
 
 
 
@@ -25,13 +32,9 @@ end
 task.wait(7)
 player.Character:MoveTo(chest.Position)
 
+task.wait(2)
 
-for _, obj in ipairs(popup:GetDescendants()) do
-	if obj:IsA("TextButton") or obj:IsA("ImageButton") then
-		obj:Activate()
-		obj.MouseButton1Click:Fire()
-	end
-end
+ClaimReward:FireServer()
 
 
 
