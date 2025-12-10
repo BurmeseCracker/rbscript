@@ -1,29 +1,60 @@
-
-
-local parent_folder = workspace:WaitForChild("segmentSystem")
-
-local chest = workspace.Finish.Chest
-
-local player = game.Players.LocalPlayer
-
-
+--// Auto Collect Bill Script
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TaskCompleted = ReplicatedStorage.Events.Restaurant.TaskCompleted
 
- 
+-- Your Tycoon path:
+local Tycoon = workspace:WaitForChild("Tycoons"):WaitForChild("Tycoon")
+local SurfaceItems = Tycoon.Items:WaitForChild("Surface")
 
+--// Collects bill safely
+local function CollectBill(furniture)
+    local bill = furniture:FindFirstChild("Bill") 
+        or furniture:WaitForChild("Bill", 3) -- wait max 3 sec
 
+    if not bill then
+        warn("No Bill found in:", furniture.Name)
+        return
+    end
 
+    -- Fire task to server
+    TaskCompleted:FireServer({
+        Name = "CollectBill";
+        FurnitureModel = furniture;
+        Tycoon = Tycoon;
+    })
 
-for _, child_folder in ipairs(parent_folder:GetChildren()) do
-	for _, part in ipairs(child_folder:GetDescendants()) do
-		if part:IsA("BasePart") then
-			local val = part:FindFirstChild("breakable")
-			if val and val:IsA("BoolValue") and val.Value == true then
-				part:Destroy()
-			end
-		end
-	end
+    print("Collected Bill from furniture:", furniture.Name)
 end
+
+--// Connect when Bill appears
+local function onNewFurniture(furniture)
+    -- If Bill already exists immediately
+    if furniture:FindFirstChild("Bill") then
+        CollectBill(furniture)
+    end
+
+    -- Listen for Bill added later
+    furniture.ChildAdded:Connect(function(child)
+        if child.Name == "Bill" then
+            CollectBill(furniture)
+        end
+    end)
+end
+
+--// Scan all existing furniture
+for _, furniture in ipairs(SurfaceItems:GetChildren()) do
+    onNewFurniture(furniture)
+end
+
+--// Detect new furniture added
+SurfaceItems.ChildAdded:Connect(function(furniture)
+    onNewFurniture(furniture)
+end)
+
+print("Auto-bill collector enabled!")
+
 
 
 
