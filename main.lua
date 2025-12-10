@@ -6,18 +6,8 @@ local scripts = {
     "rushHour.lua",
 }
 
--- Wait until your Tycoon exists
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local TycoonsFolder = workspace:WaitForChild("Tycoons")
 
-local Tycoon
-repeat
-    task.wait(1)
-    Tycoon = TycoonsFolder:FindFirstChild(LocalPlayer.Name)
-until Tycoon
 
-print("✅ My Tycoon detected:", Tycoon.Name)
 
 -- Now load scripts
 for _, file in ipairs(scripts) do
