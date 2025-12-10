@@ -1,9 +1,10 @@
 local base = "https://raw.githubusercontent.com/BurmeseCracker/rbscript/refs/heads/main/"
 
 local scripts = {
+    "collectDish.lua",
     "collectBill.lua",
     "rushHour.lua",
-    "collectDish.lua",
+    
   
     -- add more files here
 }
