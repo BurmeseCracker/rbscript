@@ -3,16 +3,22 @@ local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TaskCompleted = ReplicatedStorage.Events.Restaurant.TaskCompleted
 
---// Fix Tycoon path
+--// Wait for Tycoons folder
 local TycoonsFolder = workspace:WaitForChild("Tycoons")
-local Tycoon = TycoonsFolder:GetChildren()[2] -- pick the 2nd tycoon
 
-if not Tycoon then
-    warn("Tycoon not found!")
-    return
-end
+--// Wait until a Tycoon with Items exists
+local Tycoon
+repeat
+    task.wait(1) -- check every second
+    for _, t in ipairs(TycoonsFolder:GetChildren()) do
+        if t:FindFirstChild("Items") then
+            Tycoon = t
+            break
+        end
+    end
+until Tycoon
 
---// Use Items folder directly
+--// Wait for the Items folder inside that Tycoon
 local SurfaceItems = Tycoon:WaitForChild("Items")
 
 --// Collects bill safely
@@ -23,6 +29,7 @@ local function CollectBill(furniture)
         return
     end
 
+    -- Fire task to server
     TaskCompleted:FireServer({
         Name = "CollectBill";
         FurnitureModel = furniture;
@@ -34,10 +41,12 @@ end
 
 --// Connect when Bill appears
 local function onNewFurniture(furniture)
+    -- If Bill already exists immediately
     if furniture:FindFirstChild("Bill") then
         CollectBill(furniture)
     end
 
+    -- Listen for Bill added later
     furniture.ChildAdded:Connect(function(child)
         if child.Name == "Bill" then
             CollectBill(furniture)
