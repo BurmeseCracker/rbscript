@@ -1,26 +1,27 @@
-
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TaskCompleted = ReplicatedStorage.Events.Restaurant.TaskCompleted
+local TaskCompleted = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Restaurant"):WaitForChild("TaskCompleted")
 
 -- Wait for Tycoons folder
 local TycoonsFolder = workspace:WaitForChild("Tycoons")
 
--- Wait until a Tycoon with Items exists
-local Tycoon
+-- Wait until your own Tycoon exists
+local MyTycoon
 repeat
     task.wait(1)
-    for _, t in ipairs(TycoonsFolder:GetChildren()) do
-        if t:FindFirstChild("Items") and t.Items:FindFirstChild("Surface") then
-            Tycoon = t
-            break
-        end
-    end
-until Tycoon
+    MyTycoon = TycoonsFolder:FindFirstChild(LocalPlayer.Name)
+until MyTycoon
+
+-- If Tycoon is not yours (failsafe)
+if not MyTycoon then
+    warn("Your Tycoon was not found! Script will not run.")
+    LocalPlayer:Kick("No Tycoon found for your player!")
+    return
+end
 
 -- Get Surface folder inside Items
-local Surface = Tycoon.Items:WaitForChild("Surface")
+local Surface = MyTycoon:WaitForChild("Items"):WaitForChild("Surface")
 
 -- Function to collect a Bill from furniture safely
 local function CollectBill(furniture)
@@ -34,7 +35,7 @@ local function CollectBill(furniture)
     TaskCompleted:FireServer({
         Name = "CollectBill";
         FurnitureModel = furniture;
-        Tycoon = Tycoon;
+        Tycoon = MyTycoon;
     })
 
     print("Collected Bill from furniture:", furniture.Name)
@@ -65,4 +66,4 @@ Surface.ChildAdded:Connect(function(furniture)
     HandleFurniture(furniture)
 end)
 
-print("Auto-bill collector enabled! All Bills will be collected automatically.")
+print("✅ Auto-bill collector enabled! Only working on your Tycoon:", MyTycoon.Name)
