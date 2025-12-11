@@ -1,43 +1,41 @@
+--// Auto Collect Bill Script
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TaskCompleted = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Restaurant"):WaitForChild("TaskCompleted")
+local TaskCompleted = ReplicatedStorage.Events.Restaurant.TaskCompleted
 
--- Wait for Tycoons folder
-local TycoonsFolder = workspace:WaitForChild("Tycoons")
+-- Your Tycoon path:
+local Tycoon = workspace:WaitForChild("Tycoons"):WaitForChild("Tycoon")
+local SurfaceItems = Tycoon.Items:WaitForChild("Surface")
 
--- Wait until your own Tycoon exists
-
-
--- Get Surface folder inside Items
-local Surface = MyTycoon:WaitForChild("Items"):WaitForChild("Surface")
-
--- Function to collect a Bill from furniture safely
+--// Collects bill safely
 local function CollectBill(furniture)
-    local bill = furniture:FindFirstChild("Bill") or furniture:WaitForChild("Bill", 3)
+    local bill = furniture:FindFirstChild("Bill") 
+        or furniture:WaitForChild("Bill", 3) -- wait max 3 sec
+
     if not bill then
         warn("No Bill found in:", furniture.Name)
         return
     end
 
-    -- Fire server to collect the Bill
+    -- Fire task to server
     TaskCompleted:FireServer({
         Name = "CollectBill";
         FurnitureModel = furniture;
-        Tycoon = MyTycoon;
+        Tycoon = Tycoon;
     })
 
     print("Collected Bill from furniture:", furniture.Name)
 end
 
--- Function to handle furniture
-local function HandleFurniture(furniture)
-    -- Check if Bill already exists
+--// Connect when Bill appears
+local function onNewFurniture(furniture)
+    -- If Bill already exists immediately
     if furniture:FindFirstChild("Bill") then
         CollectBill(furniture)
     end
 
-    -- Listen for new Bill added later
+    -- Listen for Bill added later
     furniture.ChildAdded:Connect(function(child)
         if child.Name == "Bill" then
             CollectBill(furniture)
@@ -45,14 +43,14 @@ local function HandleFurniture(furniture)
     end)
 end
 
--- Scan existing furniture in Surface
-for _, furniture in ipairs(Surface:GetChildren()) do
-    HandleFurniture(furniture)
+--// Scan all existing furniture
+for _, furniture in ipairs(SurfaceItems:GetChildren()) do
+    onNewFurniture(furniture)
 end
 
--- Detect new furniture added to Surface
-Surface.ChildAdded:Connect(function(furniture)
-    HandleFurniture(furniture)
+--// Detect new furniture added
+SurfaceItems.ChildAdded:Connect(function(furniture)
+    onNewFurniture(furniture)
 end)
 
-print("✅ Auto-bill collector enabled! Only working on your Tycoon:", MyTycoon.Name)
+print("Auto-bill collector enabled!")
