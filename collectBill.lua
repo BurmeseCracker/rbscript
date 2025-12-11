@@ -10,17 +10,11 @@ local SurfaceItems = Tycoon.Items:WaitForChild("Surface")
 
 --// Collects bill safely
 local function CollectBill(furniture)
-    -- Safety check
-    if not furniture or typeof(furniture) ~= "Instance" then
-        warn("CollectBill: furniture is nil or invalid")
-        return
-    end
-
     local bill = furniture:FindFirstChild("Bill") 
-        or furniture:WaitForChild("Bill", 3)
+        or furniture:WaitForChild("Bill", 3) -- wait max 3 sec
 
     if not bill then
-        warn("No Bill found in:", furniture.Name)
+        warn("No Bill found")
         return
     end
 
@@ -31,16 +25,11 @@ local function CollectBill(furniture)
         Tycoon = Tycoon;
     })
 
-    print("Collected Bill from furniture:", furniture.Name)
+    print("Collected Bill from furniture")
 end
 
 --// Connect when Bill appears
 local function onNewFurniture(furniture)
-    -- Safety check
-    if not furniture or typeof(furniture) ~= "Instance" then
-        return
-    end
-
     -- If Bill already exists immediately
     if furniture:FindFirstChild("Bill") then
         CollectBill(furniture)
@@ -64,4 +53,4 @@ SurfaceItems.ChildAdded:Connect(function(furniture)
     onNewFurniture(furniture)
 end)
 
-print("Auto-bill collector enabled!")
+print("Auto-bill collector enabled!") // fix this script attempt to nil with Name I want this script
