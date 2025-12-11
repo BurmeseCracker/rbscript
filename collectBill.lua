@@ -7,18 +7,7 @@ local TaskCompleted = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Res
 local TycoonsFolder = workspace:WaitForChild("Tycoons")
 
 -- Wait until your own Tycoon exists
-local MyTycoon
-repeat
-    task.wait(1)
-    MyTycoon = TycoonsFolder:FindFirstChild(LocalPlayer.Name)
-until MyTycoon
 
--- If Tycoon is not yours (failsafe)
-if not MyTycoon then
-    warn("Your Tycoon was not found! Script will not run.")
-    LocalPlayer:Kick("No Tycoon found for your player!")
-    return
-end
 
 -- Get Surface folder inside Items
 local Surface = MyTycoon:WaitForChild("Items"):WaitForChild("Surface")
