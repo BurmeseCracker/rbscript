@@ -15,7 +15,7 @@ local function CollectBill(furniture)
         or furniture:WaitForChild("Bill", 3) -- wait max 3 sec
 
     if not bill then
-        warn("No Bill found")
+        print("No Bill found")
         return
     end
 
