@@ -4,54 +4,61 @@ local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TaskCompleted = ReplicatedStorage.Events.Restaurant.TaskCompleted
 
--- Wait for tycoon (NO owner checks, you keep your own “Tycoon” name)
-local Tycoon = workspace:WaitForChild("Tycoons"):WaitForChild("Tycoon")
+------------------------------------------------------------
+-- FIND REAL TYCOON SAFELY (No index, no owner check)
+------------------------------------------------------------
+local function GetRealTycoon()
+    local Tycoons = workspace:WaitForChild("Tycoons")
 
--- Items sometimes loads late, so wait safely
-local Items = Tycoon:WaitForChild("Items", 10)
-if not Items then
-    warn("Items folder did NOT load")
-    return
-end
+    while true do
+        for _, t in ipairs(Tycoons:GetChildren()) do
+            local items = t:FindFirstChild("Items")
+            local surface = items and items:FindFirstChild("Surface")
 
--- Surface folder also loads later
-local SurfaceItems = Items:WaitForChild("Surface", 10)
-if not SurfaceItems then
-    warn("Surface folder missing")
-    return
-end
+            if surface then
+                print("Found Tycoon:", t.Name)
+                return t, items, surface
+            end
+        end
 
---// Collects bill safely
-local function CollectBill(furniture)
-    -- FIX: FireServer must exist before calling it
-    if not TaskCompleted then
-        warn("TaskCompleted event missing!")
-        return
+        task.wait(0.2)
     end
+end
 
-    local bill = furniture:FindFirstChild("Bill") 
+local Tycoon, Items, SurfaceItems = GetRealTycoon()
+
+------------------------------------------------------------
+-- Collect Bill function (your original logic)
+------------------------------------------------------------
+local function CollectBill(furniture)
+    local bill = furniture:FindFirstChild("Bill")
         or furniture:WaitForChild("Bill", 3)
 
     if not bill then
+        warn("No Bill found")
         return
     end
 
-    -- FIX: Correct FireServer call so it doesn't error
+    -- Fire task to server
     TaskCompleted:FireServer({
-        Name = "CollectBill",
-        FurnitureModel = furniture,
-        Tycoon = Tycoon,
+        Name = "CollectBill";
+        FurnitureModel = furniture;
+        Tycoon = Tycoon;
     })
 
-    print("Collected bill")
+    print("Collected Bill from furniture")
 end
 
---// Detect Bill on furniture
+------------------------------------------------------------
+-- When new furniture appears
+------------------------------------------------------------
 local function onNewFurniture(furniture)
+    -- If Bill already exists
     if furniture:FindFirstChild("Bill") then
         CollectBill(furniture)
     end
 
+    -- Bill appears later
     furniture.ChildAdded:Connect(function(child)
         if child.Name == "Bill" then
             CollectBill(furniture)
@@ -59,12 +66,18 @@ local function onNewFurniture(furniture)
     end)
 end
 
---// Scan old
+------------------------------------------------------------
+-- Scan existing furniture
+------------------------------------------------------------
 for _, furniture in ipairs(SurfaceItems:GetChildren()) do
     onNewFurniture(furniture)
 end
 
---// Scan new
-SurfaceItems.ChildAdded:Connect(onNewFurniture)
+------------------------------------------------------------
+-- New furniture added
+------------------------------------------------------------
+SurfaceItems.ChildAdded:Connect(function(furniture)
+    onNewFurniture(furniture)
+end)
 
-print("Auto Bill Collector Loaded!")
+print("Auto-bill collector enabled!")
