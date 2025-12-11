@@ -33,4 +33,3 @@ task.spawn(function()
     end
 end)
 
-print("✅ Script active for Tycoon:", MyTycoon.Name)
