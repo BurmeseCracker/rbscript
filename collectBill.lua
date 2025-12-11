@@ -30,12 +30,10 @@ end
 
 --// Connect when Bill appears
 local function onNewFurniture(furniture)
-    -- If Bill already exists immediately
     if furniture:FindFirstChild("Bill") then
         CollectBill(furniture)
     end
 
-    -- Listen for Bill added later
     furniture.ChildAdded:Connect(function(child)
         if child.Name == "Bill" then
             CollectBill(furniture)
@@ -43,14 +41,14 @@ local function onNewFurniture(furniture)
     end)
 end
 
---// Scan all existing furniture
+--// Scan existing furniture
 for _, furniture in ipairs(SurfaceItems:GetChildren()) do
     onNewFurniture(furniture)
 end
 
---// Detect new furniture added
+--// Detect new furniture
 SurfaceItems.ChildAdded:Connect(function(furniture)
     onNewFurniture(furniture)
 end)
 
-print("Auto-bill collector enabled!") // fix this script attempt to nil with Name I want this script
+print("Auto-bill collector enabled!") -- FIXED
