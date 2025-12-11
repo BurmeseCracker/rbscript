@@ -3,8 +3,9 @@ local base = "https://raw.githubusercontent.com/BurmeseCracker/rbscript/refs/hea
 local scripts = {
    
     "rushHour.lua",
-    "collectBill.lua",
     "collectDish.lua",
+    "collectBill.lua",
+    
 }
 
 
