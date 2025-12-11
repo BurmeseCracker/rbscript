@@ -1,3 +1,5 @@
+task.wait(5)
+
 --// Auto Collect Bill Script
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
