@@ -2,7 +2,8 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TaskCompleted = ReplicatedStorage.Events.Restaurant.TaskCompleted
+local TaskCompleted = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Restaurant"):WaitForChild("TaskCompleted")
+
 
 -- Your Tycoon path:
 local Tycoon = workspace:WaitForChild("Tycoons"):WaitForChild("Tycoon")
