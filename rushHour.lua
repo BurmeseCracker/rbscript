@@ -32,7 +32,6 @@ local function ForceRushHour()
         ScreenWidgets:SetRushHourVisible(true)
     end)
 
-    print("⚡ Forced Rush Hour ON:", eventType)
 end
 
 -- Hook state changes
