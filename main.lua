@@ -1,3 +1,6 @@
+while task.wait(2)
+do
+
 local base = "https://raw.githubusercontent.com/BurmeseCracker/rbscript/refs/heads/main/"
 
 local scripts = {
@@ -19,3 +22,4 @@ for _, file in ipairs(scripts) do
 end
 
 print("✅ All scripts loaded!")
+end
