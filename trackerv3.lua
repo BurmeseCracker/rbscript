@@ -9,7 +9,9 @@ local MAX_DISTANCE = 100
 -- Put all valid item names in this table
 local TARGET_NAMES = {
     ["Chips"] = true,
-    ["Bloxiade"] = true
+    ["Bloxiade"] = true,
+    ["Beans"] = true,
+    ["Bloxy Cola"] = true
 
 }
 
