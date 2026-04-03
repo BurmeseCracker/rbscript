@@ -5,7 +5,7 @@ local player = Players.LocalPlayer
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
 -- Config
-local MAX_DISTANCE = 100 
+local MAX_DISTANCE = 200 
 local TARGET_NAME = "Fuel"
 
 local activeBeams = {} 
