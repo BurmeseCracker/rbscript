@@ -5,6 +5,7 @@ local scripts = {
     "trackerv1.lua",
     "trackerv2.lua",
     "trackerv3.lua",
+    "trackerv4.lua",
    
     
 }
