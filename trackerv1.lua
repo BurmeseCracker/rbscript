@@ -5,7 +5,7 @@ local player = Players.LocalPlayer
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
 -- Config
-local MAX_DISTANCE = 100 -- Distance the "Gold Path" appears
+local MAX_DISTANCE = 200 -- Distance the "Gold Path" appears
 local TARGET_NAME = "Battery"
 
 local activeBeams = {} -- Keeps track of active paths
