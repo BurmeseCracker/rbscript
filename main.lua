@@ -8,6 +8,7 @@ local scripts = {
     "trackerv4.lua",
     "AutoCollectFuel.lua",
     "AutoCollectBattery.lua",
+    "AutoCollectScrap.lua",
    
     
 }
