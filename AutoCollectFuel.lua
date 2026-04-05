@@ -11,7 +11,10 @@ local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Too
 
 -- Config
 local MAX_DIST = 12 
-local TARGET_NAME = "Fuel" -- Fuel အတွက် သီးသန့်
+
+local TARGET_NAME = {
+    ["Fuel"] = true, ["Refined Fuel"] = true
+}
 local processed = {} 
 
 -- အရင် Loop ရှိခဲ့ရင် Disconnect အရင်လုပ်မယ်
