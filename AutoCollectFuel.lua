@@ -10,21 +10,19 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_DIST = 12 
-
-local TARGET_NAME = {
-    ["Fuel"] = true, ["Refined Fuel"] = true
+local MAX_DIST = 15 -- အကွာအဝေးကို နည်းနည်း ထပ်တိုးထားပေးတယ်
+local TARGET_NAMES = {
+    ["Fuel"] = true, 
+    ["Refined Fuel"] = true
 }
 local processed = {} 
 
--- အရင် Loop ရှိခဲ့ရင် Disconnect အရင်လုပ်မယ်
 if _G.AutoFuelLoop then 
     _G.AutoFuelLoop:Disconnect() 
     _G.AutoFuelLoop = nil
 end
 
 _G.AutoFuelLoop = RunService.Heartbeat:Connect(function()
-    -- Menu မှာ Toggle OFF လိုက်ရင် Loop ကိုပါ အပြီးသတ် ဖျက်မယ်
     if _G["AutoCollectFuel"] ~= true then 
         if _G.AutoFuelLoop then
             _G.AutoFuelLoop:Disconnect()
@@ -38,8 +36,8 @@ _G.AutoFuelLoop = RunService.Heartbeat:Connect(function()
     if not root then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-        -- Fuel ဖြစ်ရမယ်၊ ပြီးတော့ တစ်ခါမှ မကောက်ရသေးတဲ့ Item ဖြစ်ရမယ်
-        if item.Name == TARGET_NAME and not processed[item] then
+        -- ပြင်လိုက်တဲ့နေရာ: Table ထဲမှာ ဒီ item name ရှိလား စစ်တာ
+        if TARGET_NAMES[item.Name] and not processed[item] then
             local success, pos = pcall(function() return item:GetPivot().Position end)
             if not success then continue end
             
@@ -47,9 +45,10 @@ _G.AutoFuelLoop = RunService.Heartbeat:Connect(function()
             if dist <= MAX_DIST then
                 processed[item] = true 
                 
-                -- Fuel ကို Remote နဲ့ လှမ်းကောက်မယ်
-                local fuelUnion = item:FindFirstChild("Union") or item
-                PickUpRemote:FireServer(fuelUnion)
+                -- Fuel Union ကို ရှာမယ်၊ မရှိရင် item တစ်ခုလုံးကို သုံးမယ်
+                local fuelTarget = item:FindFirstChild("Union") or item:FindFirstChildWhichIsA("BasePart") or item
+                
+                PickUpRemote:FireServer(fuelTarget)
                 
                 task.delay(0.1, function()
                     if item and item.Parent then 
@@ -57,8 +56,8 @@ _G.AutoFuelLoop = RunService.Heartbeat:Connect(function()
                     end
                 end)
 
-                -- ၅ စက္ကန့်အကြာမှာ list ထဲက ပြန်ထုတ်ပေးမယ်
-                task.delay(5, function() 
+                -- ၂ စက္ကန့်လောက်ဆိုရင် processed ထဲက ပြန်ထုတ်လို့ရပြီ (၅ စက္ကန့်က ကြာလွန်းလို့)
+                task.delay(2, function() 
                     processed[item] = nil 
                 end)
             end
