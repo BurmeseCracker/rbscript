@@ -137,7 +137,9 @@ AddToggle("Locate Fuel", "trackerv4.lua")
 AddToggle("Locate Crate", "trackerv5.lua")
 
 AddSection("SETTINGS MENU")
+AddToggle("Lag-Optimizer", "LagFixed.lua")
 AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
+        
     -- ၁။ အကုန်ပိတ်မယ်
     _G["speed"] = false
     _G["noclip"] = false
