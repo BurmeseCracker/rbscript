@@ -1,8 +1,18 @@
--- IMPROVED NOCLIP (Anti-Rubberband)
+-- ORIGINAL NOCLIP LOGIC WITH POP-UP
 local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
 local player = game.Players.LocalPlayer
 
 if _G.NoclipLoop then _G.NoclipLoop:Disconnect() end
+
+-- ON လိုက်တာနဲ့ Message ပေါ်မယ်
+if _G["noclip"] == true then
+    StarterGui:SetCore("SendNotification", {
+        Title = "Noclip Active",
+        Text = "Go slowly through to the wall", -- မင်းလိုချင်တဲ့ English အတိုကောက်စာသား
+        Duration = 5
+    })
+end
 
 _G.NoclipLoop = RunService.Stepped:Connect(function()
     if _G["noclip"] == true then
@@ -12,14 +22,9 @@ _G.NoclipLoop = RunService.Stepped:Connect(function()
                     v.CanCollide = false
                 end
             end
-            -- Character ကို Noclip State (11) ပြောင်းလိုက်ခြင်းဖြင့် Physics ကန်အားကို လျှော့ချမယ်
-            local hum = player.Character:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum:ChangeState(11)
-            end
         end
     else
-        -- OFF လုပ်လိုက်ရင် ပုံမှန်အတိုင်း ပြန်ဖြစ်သွားမယ်
+        -- OFF ဖြစ်ရင် Logic အဟောင်းအတိုင်း CanCollide ပြန်ဖွင့်မယ်
         if player.Character then
             for _, v in pairs(player.Character:GetDescendants()) do
                 if v:IsA("BasePart") then
@@ -30,4 +35,4 @@ _G.NoclipLoop = RunService.Stepped:Connect(function()
         _G.NoclipLoop:Disconnect()
         _G.NoclipLoop = nil
     end
-end)
+enActiveive
