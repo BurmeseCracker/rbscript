@@ -1,84 +1,56 @@
+-- TRACKER V3 (ITEM TRACKER) WITH AUTO-CLEANUP
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-
 local player = Players.LocalPlayer
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
-
--- Config
 local MAX_DISTANCE = 100 
--- Put all valid item names in this table
-local TARGET_NAMES = {
-    ["Chips"] = true,
-    ["Bloxiade"] = true,
-    ["Beans"] = true,
-    ["Bloxy Cola"] = true
 
+local TARGET_NAMES = {
+    ["Chips"] = true, ["Bloxiade"] = true, ["Beans"] = true, ["Bloxy Cola"] = true
 }
 
-local activeBeams = {} 
+if _G.TrackerV3Loop then _G.TrackerV3Loop:Disconnect() end
+_G.v3Beams = _G.v3Beams or {}
 
-local function createPath(model, root)
-    if activeBeams[model] then return end
-    
-    local targetPart = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
-    if not targetPart then return end
-
-    local attP = Instance.new("Attachment")
-    attP.Parent = root
-    
-    local attB = Instance.new("Attachment")
-    attB.Parent = targetPart
-    
-    local beam = Instance.new("Beam")
-    beam.Attachment0 = attP
-    beam.Attachment1 = attB
-    
-    -- LIME GREEN COLOR (RGB: 0, 255, 0)
-    beam.Color = ColorSequence.new(Color3.fromRGB(0, 255, 0)) 
-    beam.LightEmission = 1
-    beam.LightInfluence = 0
-    
-    beam.Width0, beam.Width1 = 0.35, 0.35 
-    beam.Texture = "rbxassetid://44611181" 
-    beam.TextureSpeed = 2.5 
-    beam.FaceCamera = true
-    beam.Parent = root
-    
-    activeBeams[model] = {beam = beam, aP = attP, aB = attB}
-end
-
-local function removePath(model)
-    local data = activeBeams[model]
-    if data then
-        data.beam:Destroy()
-        data.aP:Destroy()
-        data.aB:Destroy()
-        activeBeams[model] = nil
+local function clearV3()
+    for model, data in pairs(_G.v3Beams) do
+        if data.beam then data.beam:Destroy() end
+        if data.aP then data.aP:Destroy() end
+        if data.aB then data.aB:Destroy() end
     end
+    _G.v3Beams = {}
 end
 
-RunService.Heartbeat:Connect(function()
-    local char = player.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+_G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
+    if _G["trackerv3"] == true then
+        local char = player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
 
-    -- Scan the folder for any models in our target list
-    for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-        if item:IsA("Model") and TARGET_NAMES[item.Name] then
-            local dist = (root.Position - item:GetPivot().Position).Magnitude
-            
-            if dist <= MAX_DISTANCE then
-                createPath(item, root)
-            else
-                removePath(item)
+        for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
+            if item:IsA("Model") and TARGET_NAMES[item.Name] then
+                local dist = (root.Position - item:GetPivot().Position).Magnitude
+                if dist <= MAX_DISTANCE then
+                    if not _G.v3Beams[item] then
+                        local attP, attB = Instance.new("Attachment", root), Instance.new("Attachment", item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart"))
+                        local beam = Instance.new("Beam", root)
+                        beam.Attachment0, beam.Attachment1 = attP, attB
+                        beam.Color = ColorSequence.new(Color3.fromRGB(0, 255, 0)) -- Lime Green
+                        beam.Width0, beam.Width1, beam.Texture, beam.TextureSpeed, beam.FaceCamera = 0.35, 0.35, "rbxassetid://44611181", 2.5, true
+                        _G.v3Beams[item] = {beam = beam, aP = attP, aB = attB}
+                    end
+                else
+                    if _G.v3Beams[item] then
+                        _G.v3Beams[item].beam:Destroy(); _G.v3Beams[item].aP:Destroy(); _G.v3Beams[item].aB:Destroy()
+                        _G.v3Beams[item] = nil
+                    end
+                end
             end
         end
-    end
-
-    -- Cleanup if the item is removed from the game
-    for model, _ in pairs(activeBeams) do
-        if not model:IsDescendantOf(workspace) then
-            removePath(model)
-        end
+    else
+        -- OFF လိုက်ရင် အကုန်ရှင်းပစ်မယ်
+        clearV3()
+        _G.TrackerV3Loop:Disconnect()
+        _G.TrackerV3Loop = nil
     end
 end)
