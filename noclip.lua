@@ -9,7 +9,7 @@ if _G.NoclipLoop then _G.NoclipLoop:Disconnect() end
 if _G["noclip"] == true then
     StarterGui:SetCore("SendNotification", {
         Title = "Noclip Active",
-        Text = "Go slowly through to the wall", -- မင်းလိုချင်တဲ့ English အတိုကောက်စာသား
+        Text = "Go slow or fall through map", -- မင်းလိုချင်တဲ့ English အတိုကောက်စာသား
         Duration = 5
     })
 end
@@ -35,4 +35,4 @@ _G.NoclipLoop = RunService.Stepped:Connect(function()
         _G.NoclipLoop:Disconnect()
         _G.NoclipLoop = nil
     end
-enActiveive
+end)
