@@ -1,79 +1,54 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-
 local player = Players.LocalPlayer
 local CRATE_FOLDER = workspace:WaitForChild("Map"):WaitForChild("Crates")
 
--- Config
-local MAX_DISTANCE = 500 -- Long range
-local PURPLE_COLOR = Color3.fromRGB(170, 0, 255) -- Bright Purple
-local activeBeams = {}
+local MAX_DISTANCE = 500 
+local PURPLE_COLOR = ColorSequence.new(Color3.fromRGB(170, 0, 255))
 
--- Function to create the Purple Path
-local function createPurplePath(model, root)
-    if activeBeams[model] then return end
-    
-    -- Target the MainPart specifically as you requested
-    local targetPart = model:FindFirstChild("MainPart")
-    if not targetPart then return end
+if _G.TrackerV5Loop then _G.TrackerV5Loop:Disconnect() end
+_G.v5Beams = _G.v5Beams or {}
 
-    -- 1. Create Attachments
-    local attPlayer = Instance.new("Attachment", root)
-    local attCrate = Instance.new("Attachment", targetPart)
-    
-    -- 2. Create the Beam
-    local beam = Instance.new("Beam")
-    beam.Attachment0 = attPlayer
-    beam.Attachment1 = attCrate
-    
-    -- Appearance
-    beam.Color = ColorSequence.new(PURPLE_COLOR)
-    beam.Width0, beam.Width1 = 0.4, 0.4
-    beam.Texture = "rbxassetid://44611181" -- Dotted/Shimmer line
-    beam.TextureSpeed = 2.5
-    beam.FaceCamera = true
-    beam.Parent = root
-    
-    activeBeams[model] = {beam = beam, aP = attPlayer, aB = attCrate}
+local function clearV5()
+    for model, data in pairs(_G.v5Beams) do
+        if data.beam then data.beam:Destroy() end
+        if data.aP then data.aP:Destroy() end
+        if data.aB then data.aB:Destroy() end
+    end
+    _G.v5Beams = {}
 end
 
--- Function to remove the path
-local function removePath(model)
-    local data = activeBeams[model]
-    if data then
-        data.beam:Destroy()
-        data.aP:Destroy()
-        data.aB:Destroy()
-        activeBeams[model] = nil
-    end
-end
+_G.TrackerV5Loop = RunService.Heartbeat:Connect(function()
+    if _G["trackerv5"] == true then
+        local char = player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        if not root or not CRATE_FOLDER then return end
 
--- The Scanner Loop
-RunService.Heartbeat:Connect(function()
-    local char = player.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root or not CRATE_FOLDER then return end
-
-    -- Scan the Crates Folder
-    for _, crate in pairs(CRATE_FOLDER:GetChildren()) do
-        -- Safety check for position
-        local success, pos = pcall(function() return crate:GetPivot().Position end)
-        if not success then continue end
-        
-        local dist = (root.Position - pos).Magnitude
-        
-        -- If it has a MainPart and is within distance
-        if dist <= MAX_DISTANCE and crate:FindFirstChild("MainPart") then
-            createPurplePath(crate, root)
-        else
-            removePath(crate)
+        for _, crate in pairs(CRATE_FOLDER:GetChildren()) do
+            local targetPart = crate:FindFirstChild("MainPart")
+            if targetPart then
+                local dist = (root.Position - targetPart.Position).Magnitude
+                if dist <= MAX_DISTANCE then
+                    if not _G.v5Beams[crate] then
+                        local attP = Instance.new("Attachment", root)
+                        local attB = Instance.new("Attachment", targetPart)
+                        local beam = Instance.new("Beam", root)
+                        beam.Attachment0, beam.Attachment1 = attP, attB
+                        beam.Color = PURPLE_COLOR
+                        beam.Width0, beam.Width1, beam.Texture, beam.TextureSpeed, beam.FaceCamera = 0.4, 0.4, "rbxassetid://44611181", 2.5, true
+                        _G.v5Beams[crate] = {beam = beam, aP = attP, aB = attB}
+                    end
+                else
+                    if _G.v5Beams[crate] then
+                        _G.v5Beams[crate].beam:Destroy(); _G.v5Beams[crate].aP:Destroy(); _G.v5Beams[crate].aB:Destroy()
+                        _G.v5Beams[crate] = nil
+                    end
+                end
+            end
         end
-    end
-
-    -- Cleanup for deleted or looted crates
-    for model, _ in pairs(activeBeams) do
-        if not model:IsDescendantOf(workspace) then
-            removePath(model)
-        end
+    else
+        clearV5()
+        _G.TrackerV5Loop:Disconnect()
+        _G.TrackerV5Loop = nil
     end
 end)
