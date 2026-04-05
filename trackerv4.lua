@@ -1,77 +1,57 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-
 local player = Players.LocalPlayer
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
--- Config
 local MAX_DISTANCE = 200 
-local TARGET_NAME = "Fuel"
+local TARGET_NAMES = { ["Fuel"] = true, ["Refined Fuel"] = true }
 
-local activeBeams = {} 
+if _G.TrackerV4Loop then _G.TrackerV4Loop:Disconnect() end
+_G.v4Beams = _G.v4Beams or {}
 
-local function createRedPath(model, root)
-    if activeBeams[model] then return end
-    
-    local targetPart = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
-    if not targetPart then return end
-
-    local attP = Instance.new("Attachment")
-    attP.Parent = root
-    
-    local attB = Instance.new("Attachment")
-    attB.Parent = targetPart
-    
-    local beam = Instance.new("Beam")
-    beam.Attachment0 = attP
-    beam.Attachment1 = attB
-    
-    -- COLOR SET TO BRIGHT RED (RGB: 255, 0, 0)
-    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) 
-    beam.LightEmission = 1
-    beam.LightInfluence = 0
-    
-    beam.Width0, beam.Width1 = 0.35, 0.35 
-    beam.Texture = "rbxassetid://44611181" 
-    beam.TextureSpeed = 2.5 
-    beam.FaceCamera = true
-    beam.Parent = root
-    
-    activeBeams[model] = {beam = beam, aP = attP, aB = attB}
-end
-
-local function removePath(model)
-    local data = activeBeams[model]
-    if data then
+local function clearV4()
+    for model, data in pairs(_G.v4Beams) do
         if data.beam then data.beam:Destroy() end
         if data.aP then data.aP:Destroy() end
         if data.aB then data.aB:Destroy() end
-        activeBeams[model] = nil
     end
+    _G.v4Beams = {}
 end
 
-RunService.Heartbeat:Connect(function()
-    local char = player.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+_G.TrackerV4Loop = RunService.Heartbeat:Connect(function()
+    if _G["trackerv4"] == true then
+        local char = player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
 
-    -- Scan for Fuel
-    for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-        if item:IsA("Model") and item.Name == TARGET_NAME then
-            local dist = (root.Position - item:GetPivot().Position).Magnitude
-            
-            if dist <= MAX_DISTANCE then
-                createRedPath(item, root)
-            else
-                removePath(item)
+        for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
+            if item:IsA("Model") and TARGET_NAMES[item.Name] then
+                local dist = (root.Position - item:GetPivot().Position).Magnitude
+                if dist <= MAX_DISTANCE then
+                    if not _G.v4Beams[item] then
+                        local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+                        if targetPart then
+                            local attP = Instance.new("Attachment", root)
+                            local attB = Instance.new("Attachment", targetPart)
+                            local beam = Instance.new("Beam", root)
+                            beam.Attachment0, beam.Attachment1 = attP, attB
+                            beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Red
+                            beam.Width0, beam.Width1, beam.Texture, beam.TextureSpeed, beam.FaceCamera = 0.35, 0.35, "rbxassetid://44611181", 2.5, true
+                            _G.v4Beams[item] = {beam = beam, aP = attP, aB = attB}
+                        end
+                    end
+                else
+                    if _G.v4Beams[item] then
+                        _G.v4Beams[item].beam:Destroy(); _G.v4Beams[item].aP:Destroy(); _G.v4Beams[item].aB:Destroy()
+                        _G.v4Beams[item] = nil
+                    end
+                end
             end
         end
-    end
-
-    -- Cleanup if collected or despawned
-    for model, _ in pairs(activeBeams) do
-        if not model:IsDescendantOf(workspace) then
-            removePath(model)
-        end
+    else
+        clearV4()
+        _G.TrackerV4Loop:Disconnect()
+        _G.TrackerV4Loop = nil
     end
 end)
+
