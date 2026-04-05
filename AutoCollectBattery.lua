@@ -15,7 +15,9 @@ local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Too
 
 -- Config
 local MAX_DIST = 12 
-local TARGET_NAME = "Battery"
+local TARGET_NAME = {
+    ["Battery"] = true, ["Battery Pack"] = true, ["Beans"] = true
+}
 local processed = {} 
 
 task.spawn(function()
