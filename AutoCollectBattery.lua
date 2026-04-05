@@ -1,64 +1,49 @@
 -- GitHub Script: AutoCollectBattery.lua
-local scriptID = "AutoCollectBattery" -- This matches the Menu Toggle
+local scriptID = "AutoCollectBattery" 
+
+-- Wait for the Menu Toggle
+repeat task.wait(0.1) until _G[scriptID] == true
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local player = Players.LocalPlayer
-local SEARCH_FOLDER_NAME = "DroppedItems"
+local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
 -- Remotes
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
-local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
+local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Interaction"):WaitForChild("PickUpItem")
+local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_DIST = 12 -- Slightly increased for better pick-up on mobile
+local MAX_DIST = 12 
 local TARGET_NAME = "Battery"
 local processed = {} 
 
--- THE MAIN LOOP
 task.spawn(function()
-    print("Auto Battery: STARTED")
-    
-    -- Only runs while the Menu Toggle is [ON]
+    print("Auto Collect: ACTIVE")
     while _G[scriptID] == true do
         local char = player.Character
         local root = char and char:FindFirstChild("HumanoidRootPart")
-        local folder = workspace:FindFirstChild(SEARCH_FOLDER_NAME)
-
-        if root and folder then
-            for _, item in pairs(folder:GetChildren()) do
-                -- Only target Batteries that haven't been picked up yet
+        
+        if root then
+            for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
                 if item.Name == TARGET_NAME and not processed[item] then
-                    local itemPos = item:GetPivot().Position
-                    local dist = (root.Position - itemPos).Magnitude
-
+                    local dist = (root.Position - item:GetPivot().Position).Magnitude
                     if dist <= MAX_DIST then
                         processed[item] = true 
                         
-                        -- STEP 1: Physical Pick Up
+                        -- Pick up logic
                         PickUpRemote:FireServer(item)
-                        
-                        -- STEP 2: Register to Backpack
                         task.delay(0.1, function()
-                            if item and item.Parent then
-                                AdjustRemote:FireServer(item)
-                            end
+                            if item then AdjustRemote:FireServer(item) end
                         end)
 
-                        -- Cleanup the 'processed' list after 5 seconds
-                        task.delay(5, function() 
-                            processed[item] = nil 
-                        end)
+                        -- Reset timer so it can pick up again if needed
+                        task.delay(5, function() processed[item] = nil end)
                     end
                 end
             end
         end
-        
-        -- Wait a small amount of time to prevent lag
-        task.wait(0.3) 
+        task.wait(0.3)
     end
-
-    print("Auto Battery: STOPPED")
+    print("Auto Collect: STOPPED")
 end)
