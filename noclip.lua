@@ -1,4 +1,4 @@
--- IMPROVED NOCLIP (Anti-Rubberband)
+-- FINAL ANTI-KICK NOCLIP
 local RunService = game:GetService("RunService")
 local player = game.Players.LocalPlayer
 
@@ -6,20 +6,26 @@ if _G.NoclipLoop then _G.NoclipLoop:Disconnect() end
 
 _G.NoclipLoop = RunService.Stepped:Connect(function()
     if _G["noclip"] == true then
-        if player.Character then
-            for _, v in pairs(player.Character:GetDescendants()) do
+        local char = player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+        if char then
+            for _, v in pairs(char:GetDescendants()) do
                 if v:IsA("BasePart") then
                     v.CanCollide = false
                 end
             end
-            -- Character ကို Noclip State (11) ပြောင်းလိုက်ခြင်းဖြင့် Physics ကန်အားကို လျှော့ချမယ်
-            local hum = player.Character:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum:ChangeState(11)
+            
+            if hum then hum:ChangeState(11) end
+            
+            -- Server က ပြန်မဆွဲအောင် Velocity ကို ထိန်းညှိမယ်
+            if root and root.Velocity.Magnitude > 50 then
+                root.Velocity = Vector3.new(0, 0, 0)
             end
         end
     else
-        -- OFF လုပ်လိုက်ရင် ပုံမှန်အတိုင်း ပြန်ဖြစ်သွားမယ်
+        -- OFF
         if player.Character then
             for _, v in pairs(player.Character:GetDescendants()) do
                 if v:IsA("BasePart") then
