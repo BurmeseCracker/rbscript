@@ -36,7 +36,7 @@ MakeDraggable(MainFrame)
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Title.Text = "MOD MENU V8"
+Title.Text = "MOD MENU"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
@@ -115,7 +115,7 @@ TopIconButton.Size = UDim2.new(0, 55, 0, 55)
 TopIconButton.Position = UDim2.new(0, 15, 0, 15)
 TopIconButton.BackgroundColor3 = Color3.new(0, 0, 0)
 TopIconButton.BackgroundTransparency = 0.3
-TopIconButton.Text = "MENU"; TopIconButton.TextSize = 12; TopIconButton.TextColor3 = Color3.new(1, 1, 1); TopIconButton.Font = Enum.Font.GothamBold
+TopIconButton.Text = "MOD"; TopIconButton.TextSize = 12; TopIconButton.TextColor3 = Color3.new(1, 1, 1); TopIconButton.Font = Enum.Font.GothamBold
 Instance.new("UICorner", TopIconButton).CornerRadius = UDim.new(1, 0)
 MakeDraggable(TopIconButton)
 TopIconButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
