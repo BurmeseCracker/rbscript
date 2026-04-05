@@ -1,5 +1,5 @@
 -- GitHub Script: RemoteDD.lua
-local scriptID = "RemoteDD"
+local scriptID = "LagFixed"
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
 
