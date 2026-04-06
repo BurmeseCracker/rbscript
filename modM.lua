@@ -137,7 +137,7 @@ AddToggle("Locate Fuel", "trackerv4.lua")
 AddToggle("Locate Crate", "trackerv5.lua")
 
 AddSection("SETTINGS MENU")
-AddToggle("Lag-Optimizer", "LagFixed.lua")
+AddToggle("Anti-lag", "anti-lag.lua")
 AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
         
     -- ၁။ အကုန်ပိတ်မယ်
@@ -150,6 +150,7 @@ AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
     _G["trackerv5"] = false
     _G["AutoCollectBattery"] = false
     _G["AutoCollectFuel"] = false
+
     
     task.wait(0.3)
     
