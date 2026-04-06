@@ -127,6 +127,7 @@ AddSection("PLAYER MENU")
 AddToggle("Speed Hack", "speed.lua") 
 AddToggle("Wall Hack", "noclip.lua")
 AddToggle("AutoCollect Battery", "AutoCollectBattery.lua")
+AddToggle("AutoCollect Scrap", "AutoCollectScrap.lua")
 AddToggle("AutoCollect Fuel", "AutoCollectFuel.lua")
 
 AddSection("TRACKERS MENU")
@@ -164,6 +165,7 @@ AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
     _G.v5Beams = nil
     _G.AutoBatteryLoop = nil
     _G.AutoFuelLoop = nil
+    _G.AutoScrapLoop = nil
     
     print("Mod Menu V8 Destroyed!")
 end)
