@@ -15,6 +15,21 @@ local MAX_DIST = 10
 local TARGET_NAME = "Scrap" -- Only Battery now
 local processed = {} 
 
+if _G.AutoScrapLoop then 
+    _G.AutoScrapLoop:Disconnect() 
+    _G.AutoScrapLoop = nil
+end
+
+_G.AutoScrapLoop = RunService.Heartbeat:Connect(function()
+    -- Menu မှာ OFF ထားရင် Loop ကို ရပ်ပစ်မယ်
+    if _G[scriptID] ~= true then 
+        if _G.AutoScrapLoop then
+            _G.AutoScrapLoop:Disconnect()
+            _G.AutoScrapLoop = nil
+        end
+        return 
+        end
+
 RunService.Heartbeat:Connect(function()
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
