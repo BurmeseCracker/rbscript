@@ -1,106 +1,103 @@
--- [[ anti-lag.lua - FIXED DISABLE & FPS ]] --
+-- [[ anti-lag.lua - LIME TEXT & TRANSPARENT BLACK BG ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
--- အရင်ရှိနေတဲ့ Stats Loop ဟောင်းကို ဖြတ်မယ် (ထပ်မနေအောင်)
-if _G.StatsLoop then 
-    _G.StatsLoop:Disconnect() 
-    _G.StatsLoop = nil 
+-- အဟောင်းတွေကို ရှင်းထုတ်ခြင်း
+if _G.AntiLagConnection then _G.AntiLagConnection:Disconnect() end
+local oldGui = player.PlayerGui:FindFirstChild("AntiLagGui")
+if oldGui then oldGui:Destroy() end
+
+-- UI ဖန်တီးသည့် Function (Custom Colors)
+local function CreateFPSUI()
+    local gui = Instance.new("ScreenGui", player.PlayerGui)
+    gui.Name = "AntiLagGui"
+    
+    local frame = Instance.new("Frame", gui)
+    frame.Size = UDim2.new(0, 120, 0, 50)
+    frame.Position = UDim2.new(0, 10, 0, 150)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Black Background
+    frame.BackgroundTransparency = 0.5 -- Transparent
+    frame.Active = true
+    frame.Draggable = true
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
+
+    local fpsLabel = Instance.new("TextLabel", frame)
+    fpsLabel.Name = "FPSLabel"
+    fpsLabel.Size = UDim2.new(1, -10, 0.5, 0)
+    fpsLabel.Position = UDim2.new(0, 10, 0, 0)
+    fpsLabel.BackgroundTransparency = 1
+    fpsLabel.TextColor3 = Color3.fromRGB(0, 255, 0) -- Lime Green
+    fpsLabel.TextSize = 16
+    fpsLabel.Font = Enum.Font.Code
+    fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    fpsLabel.Text = "FPS: ..."
+
+    local pingLabel = Instance.new("TextLabel", frame)
+    pingLabel.Name = "PingLabel"
+    pingLabel.Size = UDim2.new(1, -10, 0.5, 0)
+    pingLabel.Position = UDim2.new(0, 10, 0.5, 0)
+    pingLabel.BackgroundTransparency = 1
+    pingLabel.TextColor3 = Color3.fromRGB(0, 255, 0) -- Lime Green
+    pingLabel.TextSize = 16
+    pingLabel.Font = Enum.Font.Code
+    pingLabel.TextXAlignment = Enum.TextXAlignment.Left
+    pingLabel.Text = "Ping: ..."
+    
+    return gui
 end
 
-------------------------------------------
--- ၁။ Button ON ဖြစ်တဲ့အခါ (Activate)
-------------------------------------------
-if _G["anti-lag"] == true then
-    
-    -- FPS/Ping UI မရှိသေးရင် ဆောက်မယ်
+-- Main Monitoring Loop
+local lastTime = tick()
+_G.AntiLagConnection = RunService.RenderStepped:Connect(function()
     local gui = player.PlayerGui:FindFirstChild("AntiLagGui")
-    if not gui then
-        gui = Instance.new("ScreenGui", player.PlayerGui)
-        gui.Name = "AntiLagGui"
+    
+    if _G["anti-lag"] == true then
+        -- [ ON Mode ]
+        if not gui then
+            gui = CreateFPSUI()
+        end
         
-        local frame = Instance.new("Frame", gui)
-        frame.Size = UDim2.new(0, 140, 0, 50)
-        frame.Position = UDim2.new(0, 10, 0, 150)
-        frame.BackgroundColor3 = Color3.new(0, 0, 0)
-        frame.BackgroundTransparency = 0.5
-        frame.Active = true
-        frame.Draggable = true
-        Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
-
-        local fpsLabel = Instance.new("TextLabel", frame)
-        fpsLabel.Size = UDim2.new(1, 0, 0.5, 0)
-        fpsLabel.BackgroundTransparency = 1
-        fpsLabel.TextColor3 = Color3.new(1, 1, 1)
-        fpsLabel.Text = "FPS: ..."
-        fpsLabel.Parent = frame
-
-        local pingLabel = Instance.new("TextLabel", frame)
-        pingLabel.Size = UDim2.new(1, 0, 0.5, 0)
-        pingLabel.Position = UDim2.new(0, 0, 0.5, 0)
-        pingLabel.BackgroundTransparency = 1
-        pingLabel.TextColor3 = Color3.new(1, 1, 1)
-        pingLabel.Text = "Ping: ..."
-        pingLabel.Parent = frame
-
-        -- Stats Update Loop
-        local lastTime = tick()
-        _G.StatsLoop = RunService.RenderStepped:Connect(function()
-            -- Button OFF သွားရင် Loop ကိုပါ သတ်ပစ်မယ်
-            if _G["anti-lag"] ~= true then
-                if _G.StatsLoop then _G.StatsLoop:Disconnect() end
-                return
+        -- Update Stats
+        local currentTime = tick()
+        local fps = math.floor(1 / (currentTime - lastTime))
+        lastTime = currentTime
+        
+        local frame = gui:FindFirstChild("Frame")
+        if frame then
+            frame.FPSLabel.Text = "FPS: " .. fps
+            frame.PingLabel.Text = "Ping: " .. math.floor(player:GetNetworkPing() * 1000) .. "ms"
+        end
+        
+        -- Optimization Settings
+        settings().Physics.AllowSleep = true
+        settings().Physics.PhysicsEnvironmentalThrottle = 0
+        settings().Rendering.QualityLevel = 1
+        Lighting.GlobalShadows = false
+        for _, v in pairs(Lighting:GetChildren()) do
+            if v:IsA("PostProcessEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") then
+                v.Enabled = false
             end
-            
-            local currentTime = tick()
-            local fps = math.floor(1 / (currentTime - lastTime))
-            lastTime = currentTime
-            fpsLabel.Text = "FPS: " .. fps
-            pingLabel.Text = "Ping: " .. math.floor(player:GetNetworkPing() * 1000) .. "ms"
-        end)
-    end
-
-    -- Anti-Lag Settings ON မယ်
-    settings().Physics.AllowSleep = true
-    settings().Physics.PhysicsEnvironmentalThrottle = 0
-    settings().Rendering.QualityLevel = 1
-    Lighting.GlobalShadows = false
-
-    for _, v in pairs(Lighting:GetChildren()) do
-        if v:IsA("PostProcessEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") then
-            v.Enabled = false
+        end
+    else
+        -- [ OFF Mode ]
+        if gui then
+            gui:Destroy()
+        end
+        
+        -- Reset to Original Settings
+        settings().Physics.AllowSleep = false
+        settings().Physics.PhysicsEnvironmentalThrottle = 1
+        settings().Rendering.QualityLevel = 0
+        Lighting.GlobalShadows = true
+        for _, v in pairs(Lighting:GetChildren()) do
+            if v:IsA("PostProcessEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") then
+                v.Enabled = true
+            end
         end
     end
-    print("Anti-lag: ON")
+end)
 
-------------------------------------------
--- ၂။ Button OFF ဖြစ်တဲ့အခါ (Disable)
-------------------------------------------
-else
-    -- UI ကို ဖျက်မယ်
-    local gui = player.PlayerGui:FindFirstChild("AntiLagGui")
-    if gui then gui:Destroy() end
-    
-    -- Loop ကို ရပ်မယ်
-    if _G.StatsLoop then 
-        _G.StatsLoop:Disconnect() 
-        _G.StatsLoop = nil 
-    end
-
-    -- Settings တွေကို Original အတိုင်း ပြန်ပြင်မယ်
-    settings().Physics.AllowSleep = false
-    settings().Physics.PhysicsEnvironmentalThrottle = 1
-    settings().Rendering.QualityLevel = 0 -- Auto
-    Lighting.GlobalShadows = true
-
-    for _, v in pairs(Lighting:GetChildren()) do
-        if v:IsA("PostProcessEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") then
-            v.Enabled = true
-        end
-    end
-    print("Anti-lag: OFF & Disabled")
-end
-
+print("Anti-Lag System Loaded with Lime UI!")
