@@ -1,41 +1,41 @@
--- [[ SMOOTH SLOW VOID DROP ]] --
+-- [[ ULTIMATE VOID DROP - ANCHOR METHOD ]] --
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
-local function slowVoidDrop()
+local function ultimateVoidDrop()
     local char = player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
     
-    if hrp then
-        print("Starting Smooth Drop to Void...")
+    if hrp and hum then
+        print("Initiating Secure Void Drop...")
 
-        -- ၁။ Physics အရမ်းမြန်မနေအောင် ခဏ Anchor လုပ်ထားမယ် (Optional)
-        -- hrp.Anchored = true 
-
-        -- ၂။ ဖြည်းဖြည်းချင်း အောက်ကို လျှောချမယ် (အကြိမ် ၁၀၀ ခွဲပြီး ချပါမယ်)
-        -- စုစုပေါင်း -100 studs ကို တစ်ခါချရင် -1 stud နှုန်းနဲ့ ချမှာပါ
-        for i = 1, 100 do
-            if hrp.Parent then
-                -- လက်ရှိနေရာကနေ -1 stud စီ ဖြည်းဖြည်းချင်း ရွှေ့မယ်
-                hrp.CFrame = hrp.CFrame * CFrame.new(0, -1, 0)
-                
-                -- ဒီနေရာမှာ အချိန် (Wait) ကို ညှိလို့ရပါတယ်။ 
-                -- 0.05 က ပိုနှေးပြီး 0.01 က နည်းနည်းမြန်ပါမယ်။
-                task.wait(0.03) 
-            else
-                break
-            end
-        end
-
-        -- ၃။ အောက်ရောက်သွားပြီဆိုရင် ပုံမှန်အတိုင်း ပြုတ်ကျသွားအောင် လွှတ်ပေးလိုက်မယ်
-        -- hrp.Anchored = false
+        -- ၁။ Server က ပြန်မဆွဲနိုင်အောင် Character ကို အသေ (Anchor) အရင်လုပ်မယ်
+        hrp.Anchored = true
         
-        print("Smooth Drop Completed!")
+        -- ၂။ ခဏစောင့်ပြီး Position ကို -100 studs ချမယ်
+        task.wait(0.2)
+        hrp.CFrame = hrp.CFrame * CFrame.new(0, -100, 0)
+        
+        -- ၃။ ထပ်ခါထပ်ခါ မူလနေရာပြန်ရောက်တာမျိုးမဖြစ်အောင် Loop သေးသေးလေးနဲ့ အောက်ကို ထပ်တွန်းမယ်
+        for i = 1, 10 do
+            hrp.CFrame = hrp.CFrame * CFrame.new(0, -5, 0)
+            task.wait(0.05)
+        end
+        
+        -- ၄။ အောက်ရောက်သွားပြီဆိုမှ Anchor ပြန်ဖြုတ်မယ် (အောက်ကို တန်းပြုတ်ကျသွားစေရန်)
+        task.wait(0.2)
+        hrp.Anchored = false
+        
+        -- ၅။ အောက်ကို ကျဆင်းနှုန်းမြန်အောင် Velocity (အရှိန်) ပါ ထပ်ပေါင်းထည့်ပေးမယ်
+        hrp.AssemblyLinearVelocity = Vector3.new(0, -200, 0)
+        
+        print("Void Drop Successful! Character is falling.")
     else
-        warn("Character not found!")
+        warn("Character or HumanoidRootPart not found!")
     end
 end
 
 -- Script ကို Run သည်နှင့် အလုပ်လုပ်မည်
-slowVoidDrop()
+ultimateVoidDrop()
