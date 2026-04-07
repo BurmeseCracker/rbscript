@@ -1,4 +1,4 @@
--- [[ anti-lag.lua - LIME TEXT & TRANSPARENT BLACK BG ]] --
+-- [[ anti-lag.lua - LIME TEXT & FOG CLEANER MERGED ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -70,6 +70,14 @@ _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
             frame.FPSLabel.Text = "FPS: " .. fps
             frame.PingLabel.Text = "Ping: " .. math.floor(player:GetNetworkPing() * 1000) .. "ms"
         end
+
+        -- [[ FOG CLEANER LOGIC ]] --
+        local fogFolder = workspace:FindFirstChild("Fog")
+        if fogFolder then
+            for _, item in pairs(fogFolder:GetChildren()) do
+                item:Destroy()
+            end
+        end
         
         -- Optimization Settings
         settings().Physics.AllowSleep = true
@@ -100,5 +108,4 @@ _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("Anti-Lag System Loaded with Lime UI!")
-
+print("Anti-Lag System Loaded with Fog Cleaner!")
