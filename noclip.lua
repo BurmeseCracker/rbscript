@@ -30,13 +30,13 @@ _G.NoclipLoop = RunService.Stepped:Connect(function()
 
         if rayResult then
             -- နံရံရှိနေရင် Speed ကို ၅ ထားပြီး Collision ပိတ်မယ်
-            hum.WalkSpeed = 5
+            hum.WalkSpeed = 1
             for _, v in pairs(char:GetDescendants()) do
                 if v:IsA("BasePart") then v.CanCollide = false end
             end
         else
             -- နံရံမရှိရင် Speed ကို ပုံမှန် (၁၆) ပြန်ထားမယ်
-            hum.WalkSpeed = 16
+            hum.WalkSpeed = 40
             -- Collision ကိုတော့ Noclip ဖြစ်နေလို့ ပိတ်ထားဆဲပဲ ဖြစ်ရမယ်
             for _, v in pairs(char:GetDescendants()) do
                 if v:IsA("BasePart") then v.CanCollide = false end
