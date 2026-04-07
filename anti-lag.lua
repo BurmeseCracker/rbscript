@@ -1,14 +1,34 @@
--- [[ ANTI-LAG INFINITE YIELD EDITION - LIME TEXT & OPTIMIZER ]] --
+-- [[ ANTI-LAG INFINITE YIELD EDITION - DRAGGABLE & FIXED ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
 -- အဟောင်းများကို ရှင်းထုတ်ခြင်း
 if _G.AntiLagConnection then _G.AntiLagConnection:Disconnect() end
 local oldGui = player.PlayerGui:FindFirstChild("AntiLagGui")
 if oldGui then oldGui:Destroy() end
+
+-- [ DRAG LOGIC FUNCTION ]
+local function MakeDraggable(UIElement)
+    local dragging, dragInput, dragStart, startPos
+    UIElement.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; dragStart = input.Position; startPos = UIElement.Position
+            input.Changed:Connect(function() 
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end 
+            end)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            UIElement.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
 
 -- UI ဖန်တီးခြင်း (Lime Green Style)
 local function CreateFPSUI()
@@ -20,7 +40,11 @@ local function CreateFPSUI()
     frame.Position = UDim2.new(0, 10, 0, 150)
     frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     frame.BackgroundTransparency = 0.4
+    frame.Active = true -- Drag လုပ်ဖို့အတွက် လိုအပ်သည်
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+    -- ရွှေ့လို့ရအောင် လုပ်ခြင်း
+    MakeDraggable(frame)
 
     local fpsLabel = Instance.new("TextLabel", frame)
     fpsLabel.Size = UDim2.new(1, -10, 0.5, 0)
@@ -43,12 +67,8 @@ local function CreateFPSUI()
     return gui, fpsLabel, pingLabel
 end
 
-local lastTime = tick()
-local gui, fl, pl
-
--- [[ OPTIMIZATION FUNCTION (The Infinite Yield Way) ]] --
+-- [[ OPTIMIZATION FUNCTION ]] --
 local function optimizeGame()
-    -- ၁။ Lighting & Effects ကို အနိမ့်ဆုံးချခြင်း
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 9e9
     Lighting.Brightness = 1
@@ -59,7 +79,6 @@ local function optimizeGame()
         end
     end
 
-    -- ၂။ Map အတွင်းရှိ Texture နှင့် Particle များကို ရှင်းထုတ်ခြင်း
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") then
             v.Material = Enum.Material.SmoothPlastic
@@ -68,41 +87,44 @@ local function optimizeGame()
             v.Transparency = 1
         elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
             v.Enabled = false
-        elseif v:IsA("Explosion") then
-            v.Visible = false
         end
     end
-    
-    -- ၃။ Fog Cleaner
-    local fogFolder = workspace:FindFirstChild("Fog")
-    if fogFolder then fogFolder:ClearAllChildren() end
 end
+
+local lastTime = tick()
+local currentGui, fl, pl
 
 -- Main Loop
 _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
+    -- Menu ရဲ့ _G["anti-lag"] variable ကို စစ်ဆေးခြင်း
     if _G["anti-lag"] == true then
+        -- UI မရှိသေးရင် အသစ်ဆောက်မယ်
         if not player.PlayerGui:FindFirstChild("AntiLagGui") then
-            gui, fl, pl = CreateFPSUI()
-            optimizeGame() -- ON လိုက်တာနဲ့ တစ်ခါတည်း ရှင်းထုတ်မည်
+            currentGui, fl, pl = CreateFPSUI()
+            optimizeGame()
         end
         
         -- Update Stats
         local currentTime = tick()
         local fps = math.floor(1 / (currentTime - lastTime))
         lastTime = currentTime
-        if fl then fl.Text = "FPS: " .. fps end
-        if pl then pl.Text = "Ping: " .. math.floor(player:GetNetworkPing() * 1000) .. "ms" end
+        
+        if fl and pl then
+            fl.Text = "FPS: " .. fps
+            pl.Text = "Ping: " .. math.floor(player:GetNetworkPing() * 1000) .. "ms"
+        end
 
-        -- Low Graphics Settings (Constant Apply)
         settings().Rendering.QualityLevel = 1
     else
-        if player.PlayerGui:FindFirstChild("AntiLagGui") then
-            player.PlayerGui.AntiLagGui:Destroy()
-            -- Reset Settings (မူလအတိုင်းပြန်ထားရန်)
+        -- _G["anti-lag"] က false ဖြစ်သွားရင် (Menu ကနေ ပိတ်လိုက်ရင်)
+        local existingGui = player.PlayerGui:FindFirstChild("AntiLagGui")
+        if existingGui then
+            existingGui:Destroy() -- UI ကို ဖျက်မယ်
             Lighting.GlobalShadows = true
             settings().Rendering.QualityLevel = 0
+            print("Anti-Lag Disabled & UI Removed.")
         end
     end
 end)
 
-print("Infinite Yield Style Anti-Lag Loaded!")
+print("Anti-Lag with Draggable FPS Loaded!")
