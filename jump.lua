@@ -1,26 +1,38 @@
--- [[ JumpPower Script ]] --
+-- [[ JumpPower Script - Menu Version ]] --
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
-local JUMP_HEIGHT = 30 -- Set your desired jump power here
+local JUMP_POWER_CUSTOM = 100 
+local JUMP_POWER_DEFAULT = 50 -- Roblox standard jump power
 
-local function applyJumpPower(character)
+local function applyJumpLogic(character)
     local humanoid = character:WaitForChild("Humanoid")
     
-    -- Ensure the character is allowed to use JumpPower instead of JumpHeight
-    humanoid.UseJumpPower = true
-    humanoid.JumpPower = JUMP_HEIGHT
-    
-    print("JumpPower set to: " .. JUMP_HEIGHT)
+    -- We use a loop or a property change signal to ensure it stays 
+    -- at the desired value while the toggle is ON.
+    task.spawn(function()
+        while character and character:IsDescendantOf(workspace) do
+            if _G["jump"] then
+                humanoid.UseJumpPower = true
+                humanoid.JumpPower = JUMP_POWER_CUSTOM
+            else
+                -- If Toggle is OFF, reset to default and stop the loop
+                humanoid.JumpPower = JUMP_POWER_DEFAULT
+                break
+            end
+            task.wait(0.5) -- Check every half second to prevent lag
+        end
+    end)
 end
 
--- Apply to the current character
+-- Run when script is first loaded
 if player.Character then
-    applyJumpPower(player.Character)
+    applyJumpLogic(player.Character)
 end
 
--- Apply again whenever the character respawns
+-- Run when player respawns
 player.CharacterAdded:Connect(function(character)
-    applyJumpPower(character)
+    applyJumpLogic(character)
 end)
 
+print("Jump Script Loaded: Monitoring _G['jump']")
