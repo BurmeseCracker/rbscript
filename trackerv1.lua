@@ -9,7 +9,7 @@ local player = Players.LocalPlayer
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
 -- Config
-local MAX_DISTANCE = 500 
+local MAX_DISTANCE = 200
 local TARGET_NAME = "Battery"
 local v1Beams = {} -- Unique table for this script
 
