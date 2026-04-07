@@ -7,7 +7,7 @@ local player = Players.LocalPlayer
 -- Config
 local TARGET_NAME = "Bloater" 
 local EVADE_DISTANCE = 20 
-local TELEPORT_DISTANCE = 60
+local TELEPORT_DISTANCE = 20
 
 -- Function: Highlight (ESP) ကို အနီရောင်ပြောင်းလဲခြင်း
 local function applyRedHighlight(model)
