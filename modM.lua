@@ -36,7 +36,7 @@ MakeDraggable(MainFrame)
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Title.Text = "MOD MENU"
+Title.Text = "MOD MENU V8"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
@@ -131,7 +131,6 @@ AddToggle("AutoCollect Scrap", "AutoCollectScrap.lua")
 AddToggle("AutoCollect Fuel", "AutoCollectFuel.lua")
 AddToggle("AutoEvasion", "AutoEvasion.lua")
 
-
 AddSection("TRACKERS MENU")
 AddToggle("Locate Battery", "trackerv1.lua")
 AddToggle("Locate Scraps", "trackerv2.lua")
@@ -153,16 +152,16 @@ AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
     _G["trackerv5"] = false
     _G["AutoCollectBattery"] = false
     _G["AutoCollectFuel"] = false
-    _G["AutoEvasion"] = false
- 
-
+    _G["AutoCollectScrap"] = false
+    _G["AutoEvasion"] = false -- AutoEvasion ပိတ်ခြင်း
+    _G["anti-lag"] = false
     
     task.wait(0.3)
     
     -- ၂။ UI ကို ဖြတ်မယ်
     ScreenGui:Destroy()
     
-    -- ၃။ Global Tables ရှင်းမယ်
+    -- ၃။ Global Tables & Values ရှင်းမယ်
     _G.activeBeams = nil
     _G.v3Beams = nil
     _G.v4Beams = nil
