@@ -149,6 +149,7 @@ TopIconButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainF
 AddSection("PLAYER MENU")
 AddToggle("Speed Hack", "speed.lua") 
 AddToggle("Wall Hack", "noclip.lua")
+AddToggle("Jump Height","jump.lua")
 AddToggle("AutoCollect Battery", "AutoCollectBattery.lua")
 AddToggle("AutoCollect Scrap", "AutoCollectScrap.lua")
 AddToggle("AutoCollect Fuel", "AutoCollectFuel.lua")
