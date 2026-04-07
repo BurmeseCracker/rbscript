@@ -1,4 +1,5 @@
--- [[ locateBloater_v2.lua - RED HIGHLIGHT & AUTO-EVADE ]] --
+-- [[ AutoEvasion.lua - GitHub Version ]] --
+-- This script is controlled by _G["AutoEvasion"] from the Mod Menu
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
@@ -6,7 +7,7 @@ local player = Players.LocalPlayer
 -- Config
 local TARGET_NAME = "Bloater" 
 local EVADE_DISTANCE = 20 
-local TELEPORT_DISTANCE = 60 -- နည်းနည်းပိုဝေးဝေး ခုန်ပါမယ်
+local TELEPORT_DISTANCE = 60
 
 -- Function: Highlight (ESP) ကို အနီရောင်ပြောင်းလဲခြင်း
 local function applyRedHighlight(model)
@@ -17,11 +18,10 @@ local function applyRedHighlight(model)
         highlight.Parent = model
     end
     
-    -- အနီရောင် တောက်တောက် ဖြစ်အောင် ပြင်ဆင်ခြင်း
     highlight.FillColor = Color3.fromRGB(255, 0, 0) -- Pure Red
-    highlight.OutlineColor = Color3.fromRGB(255, 0, 0) -- Red Outline (အဖြူမဟုတ်တော့ပါ)
-    highlight.FillTransparency = 0.4 -- ပိုလင်းအောင် transparency လျှော့ထားသည်
-    highlight.OutlineTransparency = 0 -- အပြင်ဘောင်ကို အပိတ်ထားသည်
+    highlight.OutlineColor = Color3.fromRGB(255, 0, 0) -- Red Outline
+    highlight.FillTransparency = 0.4 
+    highlight.OutlineTransparency = 0 
 end
 
 -- Function: Teleport Logic
@@ -39,9 +39,11 @@ local function teleportAway(bloaterPos)
     end
 end
 
--- Main Loop
+-- Main Loop: Menu က Toggle ON ထားသရွေ့ပဲ အလုပ်လုပ်မည်
 task.spawn(function()
-    while true do
+    print("AutoEvasion Script Started...")
+    
+    while _G["AutoEvasion"] do
         local charFolder = workspace:FindFirstChild("Characters")
         local myChar = player.Character
         local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
@@ -59,14 +61,23 @@ task.spawn(function()
                         local dist = (myHrp.Position - entRoot.Position).Magnitude
                         if dist < EVADE_DISTANCE then
                             teleportAway(entRoot.Position)
-                            task.wait(1.5) -- Teleport ပြီးရင် ခဏနားမည်
+                            task.wait(1.2) -- Teleport ပြီးရင် ခဏနားမည် (Spam မဖြစ်အောင်)
                         end
                     end
                 end
             end
         end
-        task.wait(0.5)
+        task.wait(0.5) -- Loop speed
     end
+    
+    -- Toggle OFF ဖြစ်သွားရင် ESP တွေကို ပြန်ဖြုတ်မယ် (Clean up)
+    local charFolder = workspace:FindFirstChild("Characters")
+    if charFolder then
+        for _, ent in pairs(charFolder:GetChildren()) do
+            local hl = ent:FindFirstChild("BloaterHighlight")
+            if hl then hl:Destroy() end
+        end
+    end
+    
+    print("AutoEvasion Script Stopped.")
 end)
-
-print("Red Bloater Tracker Activated!")
