@@ -1,3 +1,4 @@
+-- [[ BurmeseModMenu_V8_Final_Full ]] --
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
@@ -36,7 +37,7 @@ MakeDraggable(MainFrame)
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Title.Text = "MOD MENU V8"
+Title.Text = "MOD MENU"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
@@ -98,7 +99,7 @@ local function AddToggle(name, fileName)
     end)
 end
 
-local function AddActionButton(name, fileName) -- Teleport လိုမျိုး Button သီးသန့်အတွက်
+local function AddActionButton(name, fileName) 
     orderCount = orderCount + 1
     local Button = Instance.new("TextButton", Scroll)
     Button.Size = UDim2.new(1, 0, 0, 40)
@@ -111,12 +112,12 @@ local function AddActionButton(name, fileName) -- Teleport လိုမျို
     Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
     
     Button.MouseButton1Click:Connect(function()
-        Button.BackgroundColor3 = Color3.fromRGB(120, 120, 120) -- ခဏအရောင်ပြောင်းမယ်
+        Button.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
         task.spawn(function()
             local success, code = pcall(function() return game:HttpGet(base .. fileName) end)
             if success then loadstring(code)() end
             task.wait(0.2)
-            Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60) -- မူလအရောင်ပြန်ထားမယ်
+            Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         end)
     end)
 end
@@ -144,17 +145,17 @@ MakeDraggable(TopIconButton)
 TopIconButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 
 ---------------------------------------------------
--- [ CONFIG ]
+-- [ CONFIG SECTION ]
 ---------------------------------------------------
 AddSection("PLAYER MENU")
 AddToggle("Speed Hack", "speed.lua") 
 AddToggle("Wall Hack", "noclip.lua")
-AddToggle("Jump Height","jump.lua")
+AddToggle("Jump Height", "jump.lua")
 AddToggle("AutoCollect Battery", "AutoCollectBattery.lua")
 AddToggle("AutoCollect Scrap", "AutoCollectScrap.lua")
 AddToggle("AutoCollect Fuel", "AutoCollectFuel.lua")
-AddToggle("EvasionBoomber", "AutoEvasion.lua")
-AddActionButton("TeleportBase", "TeleportToBase.lua") -- Button သီးသန့်အဖြစ်ပြောင်းလဲလိုက်သည်
+AddToggle("Evasion Bloater", "AutoEvasion.lua")
+AddActionButton("Teleport Base", "TeleportToBase.lua")
 
 AddSection("TRACKERS MENU")
 AddToggle("Locate Battery", "trackerv1.lua")
@@ -166,32 +167,22 @@ AddToggle("Locate Crate", "trackerv5.lua")
 AddSection("SETTINGS MENU")
 AddToggle("Anti-lag", "anti-lag.lua")
 AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
-        
+    -- Reset all global variables
     _G["speed"] = false
     _G["noclip"] = false
+    _G["jump"] = false
+    _G["AutoCollectBattery"] = false
+    _G["AutoCollectScrap"] = false
+    _G["AutoCollectFuel"] = false
+    _G["AutoEvasion"] = false
     _G["trackerv1"] = false
     _G["trackerv2"] = false
     _G["trackerv3"] = false
     _G["trackerv4"] = false
     _G["trackerv5"] = false
-    _G["AutoCollectBattery"] = false
-    _G["AutoCollectFuel"] = false
-    _G["AutoCollectScrap"] = false
-    _G["AutoEvasion"] = false
     _G["anti-lag"] = false
     
     task.wait(0.3)
-    
     ScreenGui:Destroy()
-    
-    _G.activeBeams = nil
-    _G.v3Beams = nil
-    _G.v4Beams = nil
-    _G.v5Beams = nil
-    _G.AutoBatteryLoop = nil
-    _G.AutoFuelLoop = nil
-    _G.AutoScrapLoop = nil
-    
     print("Mod Menu V8 Destroyed!")
 end)
----------------------------------------------------
