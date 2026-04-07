@@ -1,13 +1,28 @@
--- [[ AutoAim_ESP.lua - Bloater Tracker ]] --
+-- [[ AutoAim_Hold_ESP.lua ]] --
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 
 -- Config
 local TARGET_NAME = "Bloater" 
-local AIM_DISTANCE = 100 -- ဘယ်လောက်အကွာအဝေးအထိ လှည့်ကြည့်မလဲ (Distance တိုးထားပေးပါတယ်)
+local AIM_DISTANCE = 50
+local isAiming = false -- Aim လုပ်နေသလား စစ်ရန်
+
+-- Mouse ညာဘက်ခလုတ် ဖိထားခြင်း ရှိ/မရှိ စစ်ဆေးခြင်း
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        isAiming = true -- ညာဘက်ခလုတ် ဖိထားလျှင် Aim မည်
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        isAiming = false -- လွှတ်လိုက်လျှင် Free Cam ပြန်ဖြစ်မည်
+    end
+end)
 
 -- Function: Highlight (ESP)
 local function applyRedHighlight(model)
@@ -23,19 +38,19 @@ local function applyRedHighlight(model)
     end
 end
 
--- Function: Auto Aim Logic (Camera ကို Bloater ဆီ လှည့်ပေးခြင်း)
+-- Function: Auto Aim Logic
 local function autoAim(targetRoot)
-    if targetRoot then
-        -- Camera ကို Bloater ရဲ့ Position ဆီ ချောချောမွေ့မွေ့ လှည့်ကြည့်ခိုင်းမည်
+    if targetRoot and isAiming then
+        -- ညာဘက်ခလုတ် ဖိထားမှသာ Camera ကို လှည့်မည်
+        local targetPos = camera:WorldToViewportPoint(targetRoot.Position)
         camera.CFrame = CFrame.new(camera.CFrame.Position, targetRoot.Position)
     end
 end
 
 -- Main Loop
 task.spawn(function()
-    print("ESP + AutoAim Started (Teleport Disabled)...")
-    
-    _G.AutoAimActive = true -- Loop ကို ထိန်းချုပ်ရန် Variable
+    print("Hold Right-Click to Aim + ESP Started...")
+    _G.AutoAimActive = true
     
     while _G.AutoAimActive do
         local charFolder = Workspace:FindFirstChild("Characters")
@@ -48,14 +63,11 @@ task.spawn(function()
 
             for _, ent in pairs(charFolder:GetChildren()) do
                 if ent:IsA("Model") and ent.Name == TARGET_NAME then
-                    -- ၁။ ESP ပြပေးခြင်း
-                    applyRedHighlight(ent)
+                    applyRedHighlight(ent) -- ESP ကတော့ အမြဲပြနေမည်
 
                     local entRoot = ent:FindFirstChild("HumanoidRootPart") or ent:FindFirstChild("Head")
                     if entRoot then
                         local dist = (myHrp.Position - entRoot.Position).Magnitude
-                        
-                        -- ၂။ အနီးဆုံး Bloater ကို ရှာခြင်း (Aim လုပ်ရန်)
                         if dist < shortestDist then
                             shortestDist = dist
                             closestBloater = entRoot
@@ -64,22 +76,11 @@ task.spawn(function()
                 end
             end
 
-            -- ၃။ အနီးဆုံးရှိတဲ့ Bloater ကို Camera နဲ့ Auto-Aim လုပ်မည်
-            if closestBloater then
+            -- ညာဘက်ခလုတ် ဖိထားမှသာ Aim ခိုင်းမည်
+            if closestBloater and isAiming then
                 autoAim(closestBloater)
             end
         end
-        task.wait(0.01) -- ပိုပြီး Smooth ဖြစ်အောင် Loop speed ကို မြှင့်ထားပါတယ်
+        task.wait(0.01)
     end
-    
-    -- Cleanup (ပိတ်လိုက်တဲ့အခါ Highlight တွေ ရှင်းထုတ်ရန်)
-    local charFolder = Workspace:FindFirstChild("Characters")
-    if charFolder then
-        for _, ent in pairs(charFolder:GetChildren()) do
-            local hl = ent:FindFirstChild("BloaterHighlight")
-            if hl then hl:Destroy() end
-        end
-    end
-    print("AutoAim & ESP Stopped.")
 end)
-
