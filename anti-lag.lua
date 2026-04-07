@@ -1,16 +1,9 @@
--- [[ anti-lag.lua - MERGED VERSION (NO DELETIONS) ]] --
+-- [[ anti-lag.lua - LIME TEXT & TRANSPARENT BLACK BG ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
-
--- အပြင်က Script ကို loadstring နဲ့ ပေါင်းထည့်ခြင်း (ဘာမှမဖျက်ဘဲ အပေါ်ဆုံးမှာ Run ပေးမည်)
-task.spawn(function()
-    pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/z4tt483/ItzXery.lua/main/AntiLag-ItzXery.lua"))()
-    end)
-end)
 
 -- အဟောင်းတွေကို ရှင်းထုတ်ခြင်း
 if _G.AntiLagConnection then _G.AntiLagConnection:Disconnect() end
@@ -107,4 +100,5 @@ _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("Anti-Lag System Loaded with External Script & Lime UI!")
+print("Anti-Lag System Loaded with Lime UI!")
+
