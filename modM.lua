@@ -129,6 +129,8 @@ AddToggle("Wall Hack", "noclip.lua")
 AddToggle("AutoCollect Battery", "AutoCollectBattery.lua")
 AddToggle("AutoCollect Scrap", "AutoCollectScrap.lua")
 AddToggle("AutoCollect Fuel", "AutoCollectFuel.lua")
+AddToggle("AutoEvasion", "AutoEvasion.lua")
+
 
 AddSection("TRACKERS MENU")
 AddToggle("Locate Battery", "trackerv1.lua")
@@ -151,6 +153,8 @@ AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
     _G["trackerv5"] = false
     _G["AutoCollectBattery"] = false
     _G["AutoCollectFuel"] = false
+    _G["AutoEvasion"] = false
+ 
 
     
     task.wait(0.3)
