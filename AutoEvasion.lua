@@ -1,4 +1,4 @@
--- [[ AutoEvasion.lua - GitHub Version with AUTO-AIM ]] --
+-- [[ AutoAim_ESP.lua - Bloater Tracker ]] --
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -7,9 +7,7 @@ local camera = Workspace.CurrentCamera
 
 -- Config
 local TARGET_NAME = "Bloater" 
-local EVADE_DISTANCE = 20 
-local TELEPORT_DISTANCE = 25 -- နည်းနည်းလျှော့ထားပေးပါတယ်
-local AIM_DISTANCE = 20 -- ဘယ်လောက်အကွာအဝေးထိ Auto-Aim လုပ်မလဲ
+local AIM_DISTANCE = 100 -- ဘယ်လောက်အကွာအဝေးအထိ လှည့်ကြည့်မလဲ (Distance တိုးထားပေးပါတယ်)
 
 -- Function: Highlight (ESP)
 local function applyRedHighlight(model)
@@ -18,22 +16,10 @@ local function applyRedHighlight(model)
         highlight = Instance.new("Highlight")
         highlight.Name = "BloaterHighlight"
         highlight.Parent = model
-    end
-    highlight.FillColor = Color3.fromRGB(255, 0, 0)
-    highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
-    highlight.FillTransparency = 0.4 
-    highlight.OutlineTransparency = 0 
-end
-
--- Function: Teleport Logic
-local function teleportAway(bloaterPos)
-    local char = player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        local direction = (hrp.Position - bloaterPos).Unit
-        local newPos = hrp.Position + (direction * TELEPORT_DISTANCE)
-        hrp.CFrame = CFrame.new(newPos + Vector3.new(0, 5, 0))
-        print("🔴 Evaded Bloater!")
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+        highlight.FillTransparency = 0.4 
+        highlight.OutlineTransparency = 0 
     end
 end
 
@@ -47,9 +33,11 @@ end
 
 -- Main Loop
 task.spawn(function()
-    print("AutoEvasion + AutoAim Started...")
+    print("ESP + AutoAim Started (Teleport Disabled)...")
     
-    while _G["AutoEvasion"] do
+    _G.AutoAimActive = true -- Loop ကို ထိန်းချုပ်ရန် Variable
+    
+    while _G.AutoAimActive do
         local charFolder = Workspace:FindFirstChild("Characters")
         local myChar = player.Character
         local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
@@ -60,18 +48,13 @@ task.spawn(function()
 
             for _, ent in pairs(charFolder:GetChildren()) do
                 if ent:IsA("Model") and ent.Name == TARGET_NAME then
+                    -- ၁။ ESP ပြပေးခြင်း
                     applyRedHighlight(ent)
 
                     local entRoot = ent:FindFirstChild("HumanoidRootPart") or ent:FindFirstChild("Head")
                     if entRoot then
                         local dist = (myHrp.Position - entRoot.Position).Magnitude
                         
-                        -- ၁။ Teleport Logic (အလွန်နီးရင်)
-                        if dist < EVADE_DISTANCE then
-                            teleportAway(entRoot.Position)
-                            task.wait(0.5)
-                        end
-
                         -- ၂။ အနီးဆုံး Bloater ကို ရှာခြင်း (Aim လုပ်ရန်)
                         if dist < shortestDist then
                             shortestDist = dist
@@ -81,15 +64,15 @@ task.spawn(function()
                 end
             end
 
-            -- ၃။ အနီးဆုံးရှိတဲ့ Bloater ကို Auto-Aim လုပ်မည်
+            -- ၃။ အနီးဆုံးရှိတဲ့ Bloater ကို Camera နဲ့ Auto-Aim လုပ်မည်
             if closestBloater then
                 autoAim(closestBloater)
             end
         end
-        task.wait(0.05) -- Aim အတွက် Loop ကို ပိုမြန်မြန်ပတ်ပေးရပါမည်
+        task.wait(0.01) -- ပိုပြီး Smooth ဖြစ်အောင် Loop speed ကို မြှင့်ထားပါတယ်
     end
     
-    -- Cleanup
+    -- Cleanup (ပိတ်လိုက်တဲ့အခါ Highlight တွေ ရှင်းထုတ်ရန်)
     local charFolder = Workspace:FindFirstChild("Characters")
     if charFolder then
         for _, ent in pairs(charFolder:GetChildren()) do
@@ -97,5 +80,6 @@ task.spawn(function()
             if hl then hl:Destroy() end
         end
     end
-    print("AutoEvasion Stopped.")
+    print("AutoAim & ESP Stopped.")
 end)
+
