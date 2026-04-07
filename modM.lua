@@ -98,6 +98,29 @@ local function AddToggle(name, fileName)
     end)
 end
 
+local function AddActionButton(name, fileName) -- Teleport လိုမျိုး Button သီးသန့်အတွက်
+    orderCount = orderCount + 1
+    local Button = Instance.new("TextButton", Scroll)
+    Button.Size = UDim2.new(1, 0, 0, 40)
+    Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    Button.Text = name
+    Button.TextColor3 = Color3.new(1, 1, 1)
+    Button.Font = Enum.Font.GothamBold
+    Button.TextSize = 14
+    Button.LayoutOrder = orderCount
+    Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
+    
+    Button.MouseButton1Click:Connect(function()
+        Button.BackgroundColor3 = Color3.fromRGB(120, 120, 120) -- ခဏအရောင်ပြောင်းမယ်
+        task.spawn(function()
+            local success, code = pcall(function() return game:HttpGet(base .. fileName) end)
+            if success then loadstring(code)() end
+            task.wait(0.2)
+            Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60) -- မူလအရောင်ပြန်ထားမယ်
+        end)
+    end)
+end
+
 local function AddSettingsButton(name, color, callback)
     orderCount = orderCount + 1
     local Button = Instance.new("TextButton", Scroll)
@@ -130,7 +153,7 @@ AddToggle("AutoCollect Battery", "AutoCollectBattery.lua")
 AddToggle("AutoCollect Scrap", "AutoCollectScrap.lua")
 AddToggle("AutoCollect Fuel", "AutoCollectFuel.lua")
 AddToggle("EvasionBoomber", "AutoEvasion.lua")
-AddToggle("TeleportBase", "TeleportToBase.lua")
+AddActionButton("TeleportBase", "TeleportToBase.lua") -- Button သီးသန့်အဖြစ်ပြောင်းလဲလိုက်သည်
 
 AddSection("TRACKERS MENU")
 AddToggle("Locate Battery", "trackerv1.lua")
@@ -143,7 +166,6 @@ AddSection("SETTINGS MENU")
 AddToggle("Anti-lag", "anti-lag.lua")
 AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
         
-    -- ၁။ အကုန်ပိတ်မယ်
     _G["speed"] = false
     _G["noclip"] = false
     _G["trackerv1"] = false
@@ -154,15 +176,13 @@ AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
     _G["AutoCollectBattery"] = false
     _G["AutoCollectFuel"] = false
     _G["AutoCollectScrap"] = false
-    _G["AutoEvasion"] = false -- AutoEvasion ပိတ်ခြင်း
+    _G["AutoEvasion"] = false
     _G["anti-lag"] = false
     
     task.wait(0.3)
     
-    -- ၂။ UI ကို ဖြတ်မယ်
     ScreenGui:Destroy()
     
-    -- ၃။ Global Tables & Values ရှင်းမယ်
     _G.activeBeams = nil
     _G.v3Beams = nil
     _G.v4Beams = nil
