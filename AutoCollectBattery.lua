@@ -12,7 +12,7 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_DIST = 15 
+local MAX_DIST = 50 
 local TARGET_NAMES = {
     ["Battery"] = true, 
     ["Battery Pack"] = true
