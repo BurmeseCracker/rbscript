@@ -12,22 +12,45 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_DIST = 300 -- Teleport လုပ်မှာဖြစ်လို့ Distance ကို တိုးထားလိုက်ပါပြီ
+local MAX_DIST = 50 -- အနီးနားတစ်ဝိုက် (၅၀ studs) အတွင်းပဲ ရှာမည်
+local STUN_TIME = 30 -- မြေပေါ်ဆွဲချထားမည့် စက္ကန့်
 local TARGET_NAMES = {
     ["Battery"] = true, 
     ["Battery Pack"] = true
 }
 
 local processed = {} 
-local isCollecting = false -- Battery ကောက်နေတုန်း တခြားဟာ ထပ်မကောက်အောင်
+local isCollecting = false
 
--- အရင် Loop ရှိရင် ဖြတ်မယ်
+-- Character ကို မြေပြင်ပေါ် ဖိချထားမည့် Function
+local function groundStun(hrp, duration)
+    -- လှည့်မသွားအောင် ထိန်းချုပ်ခြင်း
+    local bg = Instance.new("BodyGyro")
+    bg.P = 9e4
+    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bg.CFrame = hrp.CFrame
+    bg.Parent = hrp
+
+    -- အောက်ကို ဖိချထားခြင်း
+    local bv = Instance.new("BodyVelocity")
+    bv.Velocity = Vector3.new(0, -60, 0) -- -60 အရှိန်ဖြင့် မြေပေါ်ဖိချမည်
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bv.Parent = hrp
+
+    task.wait(duration) -- ၃၀ စက္ကန့်စောင့်မည်
+
+    bg:Destroy()
+    bv:Destroy()
+end
+
+-- Loop ဟောင်းရှိလျှင် ပိတ်မည်
 if _G.AutoBatteryLoop then 
     _G.AutoBatteryLoop:Disconnect() 
     _G.AutoBatteryLoop = nil
 end
 
 _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
+    -- Menu က OFF ထားလျှင် ရပ်မည်
     if _G[scriptID] ~= true then 
         if _G.AutoBatteryLoop then
             _G.AutoBatteryLoop:Disconnect()
@@ -38,49 +61,47 @@ _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root or isCollecting then return end -- ကောက်နေတုန်းဆိုရင် ထပ်မလုပ်ဘူး
+    if not root or isCollecting then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
             local success, pos = pcall(function() return item:GetPivot().Position end)
             if not success then continue end
             
+            -- အကွာအဝေး စစ်ဆေးခြင်း
             local dist = (root.Position - pos).Magnitude
             if dist <= MAX_DIST then
-                isCollecting = true -- Collecting State Start
+                isCollecting = true
                 processed[item] = true 
                 
-                -- ၁။ Battery ဆီ Teleport လုပ်မယ်
-                -- မြေပြင်ထဲ မနစ်အောင် Battery ရဲ့ အပေါ် ၃ ပေကို ပို့ပေးမယ်
-                root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                -- ၁။ Teleport လုပ်ခြင်း (Battery ရဲ့ အပေါ် ၂ ပေ)
+                root.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
                 
-                -- ၂။ မူလနေရာ ပြန်မရောက်သွားအောင် ခဏ Freeze လုပ်မယ် (Stun Logic)
-                root.Anchored = true 
-                
-                -- ၃။ Remote နဲ့ ကောက်မယ်
-                PickUpRemote:FireServer(item)
-                
-                task.wait(0.2) -- ကောက်တာ သေချာအောင် ခဏစောင့်မယ်
-                
-                if item and item.Parent then 
-                    AdjustRemote:FireServer(item) 
-                end
+                -- ၂။ ကောက်ယူခြင်း (Background မှာ လုပ်မည်)
+                task.spawn(function()
+                    PickUpRemote:FireServer(item)
+                    task.wait(0.3)
+                    if item and item.Parent then 
+                        AdjustRemote:FireServer(item) 
+                    end
+                end)
 
-                task.wait(0.3) -- Item ပျောက်သွားတာ သေချာအောင် ထပ်စောင့်မယ်
-
-                -- ၄။ ပြန်လွှတ်ပေးမယ် (Unfreeze)
-                root.Anchored = false
+                -- ၃။ မြေပေါ်မှာ ၃၀ စက္ကန့် ဆွဲချထားခြင်း
+                print("🔋 Battery found nearby! Stunned for 30s.")
+                groundStun(root, STUN_TIME)
+                
+                -- ၄။ Stun ပြီးမှ နောက်တစ်ခု ထပ်ရှာခွင့်ပေးမည်
                 isCollecting = false
                 
-                -- ၅။ ၂ စက္ကန့်အကြာမှာ list ထဲက ပြန်ထုတ်မယ်
-                task.delay(2, function() 
+                -- ၅။ ကောက်ပြီးသား Item ကို list ထဲက ခဏဖယ်မည်
+                task.delay(5, function() 
                     processed[item] = nil 
                 end)
                 
-                break -- တစ်ကြိမ်မှာ တစ်ခုပဲ ကောက်မယ် (Teleport ဖြစ်လို့)
+                break -- တစ်ကြိမ်လျှင် တစ်ခုသာ လုပ်ဆောင်မည်
             end
         end
     end
 end)
 
-print("Battery TP Collect with Anchor Loaded!")
+print("Radius Battery TP (30s Stun) Loaded!")
