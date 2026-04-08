@@ -38,7 +38,7 @@ _G.AutoFuelLoop = RunService.Heartbeat:Connect(function()
     if not root or isCollecting then return end
 
     -- အနီးကနေ အဝေးကို အဆင့်ဆင့် ရှာဖွေခြင်း (40, 80, 120, 160...)
-    for step = 1, 50 do -- 50 အထိဆိုလျှင် map အနှံ့နီးပါး ရောက်ပါသည်
+    for step = 1, 10 do -- 50 အထိဆိုလျှင် map အနှံ့နီးပါး ရောက်ပါသည်
         local currentMaxDist = step * START_DIST
         local foundInStep = false
 
