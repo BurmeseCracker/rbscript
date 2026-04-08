@@ -12,7 +12,8 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_DIST = 50 -- အနီးနား 100 studs အတွင်း ရှာမည်
+local MAX_DIST = 100 
+local ANCHOR_TIME = 5 -- ၅ စက္ကန့် အသေချုပ်ထားမည်
 local TARGET_NAMES = {
     ["Battery"] = true, 
     ["Battery Pack"] = true
@@ -52,31 +53,37 @@ _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
                 isCollecting = true
                 processed[item] = true 
                 
-                -- ၁။ Battery ဆီသို့ တိုက်ရိုက် Teleport လုပ်ခြင်း
-                root.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
+                -- ၁။ Battery ဆီသို့ Teleport လုပ်ခြင်း
+                root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
                 
-                -- ၂။ ခဏစောင့်ပြီး Remote ဖြင့် ကောက်ယူခြင်း
-                task.wait(0.1) -- TP ပြီးတာနဲ့ ချက်ချင်းကောက်ရန်
-                PickUpRemote:FireServer(item)
-                
-                task.wait(0.1)
-                if item and item.Parent then 
-                    AdjustRemote:FireServer(item) 
-                end
+                -- ၂။ မူလနေရာ ပြန်မရောက်အောင် Anchor လုပ်ခြင်း
+                root.Anchored = true
+                print("⚡ Teleported & Anchored for 5 seconds...")
 
-                -- ၃။ နောက်တစ်ခုကို ချက်ချင်းသွားနိုင်ရန် Delay အနည်းငယ်သာထားမည်
-                task.wait(0.2)
+                -- ၃။ Remote ဖြင့် ကောက်ယူခြင်း
+                task.spawn(function()
+                    PickUpRemote:FireServer(item)
+                    task.wait(0.2)
+                    if item and item.Parent then 
+                        AdjustRemote:FireServer(item) 
+                    end
+                end)
+
+                -- ၄။ ၅ စက္ကန့်ပြည့်အောင်စောင့်ပြီးမှ Anchor ဖြုတ်ခြင်း
+                task.wait(ANCHOR_TIME)
+                root.Anchored = false
                 isCollecting = false
                 
-                -- ၄။ ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
-                task.delay(3, function() 
+                -- ၅။ ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
+                task.delay(2, function() 
                     processed[item] = nil 
                 end)
                 
-                break -- တစ်ကြိမ်လျှင် တစ်ခုစီ လျှင်မြန်စွာ သွားမည်
+                break -- တစ်ကြိမ်လျှင် တစ်ခုစီ သွားမည်
             end
         end
     end
 end)
 
-print("Fast Battery TP (No Stun) Loaded!")
+print("Battery TP (5s Anchor Loop) Loaded!")
+
