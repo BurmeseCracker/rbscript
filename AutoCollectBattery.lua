@@ -12,7 +12,7 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_DIST = 40 
+local MAX_DIST = 40 -- အနီးနား 100 studs အတွင်း ရှာမည်
 local TARGET_NAMES = {
     ["Battery"] = true, 
     ["Battery Pack"] = true
@@ -28,7 +28,7 @@ if _G.AutoBatteryLoop then
 end
 
 _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
-    -- Menu က OFF ထားလျှင် Loop ကို ဖြတ်မည်
+    -- Menu က OFF ထားလျှင် ရပ်မည်
     if _G[scriptID] ~= true then 
         if _G.AutoBatteryLoop then
             _G.AutoBatteryLoop:Disconnect()
@@ -39,50 +39,44 @@ _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChild("Humanoid")
-    if not root or not hum or isCollecting then return end
+    if not root or isCollecting then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
             local success, pos = pcall(function() return item:GetPivot().Position end)
             if not success then continue end
             
+            -- အကွာအဝေး စစ်ဆေးခြင်း
             local dist = (root.Position - pos).Magnitude
             if dist <= MAX_DIST then
                 isCollecting = true
                 processed[item] = true 
                 
-                -- [ LOOP TELEPORT + INSTANT JUMP LOGIC ] 
-                local startTime = tick()
-                while item and item.Parent and (tick() - startTime) < 3 do
-                    -- Battery ရဲ့ ဘေးနားကို Loop TP လုပ်မယ်
-                    root.CFrame = CFrame.new(pos) * CFrame.new(2, 0.5, 0)
-                    
-                    -- Instant Jumping (Loop ထဲမှာ ခုန်ခိုင်းထားမယ်)
-                    hum.Jump = true
-                    
-                    -- Remote ပစ်ခြင်း (ကောက်ရန် အမိန့်ပေးခြင်း)
-                    if (tick() - startTime) < 0.2 then
-                        PickUpRemote:FireServer(item)
-                    end
-                    
-                    RunService.Heartbeat:Wait()
-                end
+                -- ၁။ Battery ဆီသို့ တိုက်ရိုက် Teleport လုပ်ခြင်း
+                root.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
                 
-                -- Backpack ညှိခြင်း
-                AdjustRemote:FireServer(item)
+                -- ၂။ ခဏစောင့်ပြီး Remote ဖြင့် ကောက်ယူခြင်း
+                task.wait(0.1) -- TP ပြီးတာနဲ့ ချက်ချင်းကောက်ရန်
+                PickUpRemote:FireServer(item)
+                
+                task.wait(0.1)
+                if item and item.Parent then 
+                    AdjustRemote:FireServer(item) 
+                end
 
+                -- ၃။ နောက်တစ်ခုကို ချက်ချင်းသွားနိုင်ရန် Delay အနည်းငယ်သာထားမည်
+                task.wait(0.2)
                 isCollecting = false
                 
-                -- ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
+                -- ၄။ ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
                 task.delay(3, function() 
                     processed[item] = nil 
                 end)
                 
-                break 
+                break -- တစ်ကြိမ်လျှင် တစ်ခုစီ လျှင်မြန်စွာ သွားမည်
             end
         end
     end
 end)
 
-print("Fast Side-Loop TP + Instant Jump Loaded!")
+print("Fast Battery TP (No Stun) Loaded!")
