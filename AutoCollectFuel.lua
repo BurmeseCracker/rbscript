@@ -12,7 +12,7 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local START_DIST = 40 -- အနီးနား စကင်ဖတ်မည့် အကွာအဝေး
+local START_DIST = 40 -- အနီးနား 40 studs အရင်ရှာမည်
 local TARGET_NAMES = {
     ["Fuel"] = true, 
     ["Refined Fuel"] = true
@@ -37,8 +37,8 @@ _G.AutoFuelLoop = RunService.Heartbeat:Connect(function()
     local root = char and char:FindFirstChild("HumanoidRootPart")
     if not root or isCollecting then return end
 
-    -- အနီးကနေ အဝေးကို အဆင့်ဆင့် ရှာဖွေခြင်း (40, 80, 120, 160...)
-    for step = 1, 10 do -- 50 အထိဆိုလျှင် map အနှံ့နီးပါး ရောက်ပါသည်
+    -- အနီးကနေ အဝေးကို အဆင့်ဆင့် ရှာဖွေခြင်း
+    for step = 1, 50 do 
         local currentMaxDist = step * START_DIST
         local foundInStep = false
 
@@ -49,16 +49,15 @@ _G.AutoFuelLoop = RunService.Heartbeat:Connect(function()
                 
                 local dist = (root.Position - pos).Magnitude
                 
-                -- သတ်မှတ်ထားသော step အကွာအဝေးအတွင်း ရှိမရှိ စစ်ဆေးခြင်း
                 if dist <= currentMaxDist then
                     isCollecting = true
                     processed[item] = true 
                     
-                    -- ၁။ Fuel ဆီသို့ တိုက်ရိုက် Teleport လုပ်ခြင်း
+                    -- ၁။ Teleport လုပ်ခြင်း
                     root.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
                     
-                    -- ၂။ ခဏစောင့်ပြီး Remote ဖြင့် ကောက်ယူခြင်း
-                    task.wait(1) 
+                    -- ၂။ TP မြန်လွန်းတာကို ထိန်းရန် ဒီမှာ ၀.၃ စက္ကန့် စောင့်ခိုင်းလိုက်ပါတယ် (Video ပုံစံအတိုင်းဖြစ်စေရန်)
+                    task.wait(0.3) 
                     
                     local fuelTarget = item:FindFirstChild("Union") or item:FindFirstChildWhichIsA("BasePart") or item
                     PickUpRemote:FireServer(fuelTarget)
@@ -68,12 +67,11 @@ _G.AutoFuelLoop = RunService.Heartbeat:Connect(function()
                         AdjustRemote:FireServer(item) 
                     end
 
-                    -- ၃။ Delay ခဏပေးပြီး နောက်တစ်ခု ထပ်ကောက်နိုင်အောင်လုပ်မည်
-                    task.wait(0.1)
+                    -- ၃။ နောက်တစ်ခုကို မသွားခင် ခဏနားမည်
+                    task.wait(0.2)
                     isCollecting = false
                     
-                    -- ၄။ ၃ စက္ကန့်ကြာလျှင် list ထဲက ပြန်ထုတ်မည်
-                    task.delay(2, function() 
+                    task.delay(3, function() 
                         processed[item] = nil 
                     end)
                     
@@ -83,9 +81,8 @@ _G.AutoFuelLoop = RunService.Heartbeat:Connect(function()
             end
         end
 
-        -- တစ်ခုတွေ့ပြီး ကောက်လိုက်ပြီဆိုရင် Loop ကို ရပ်ပြီး နောက် Frame မှ ပြန်စမည်
         if foundInStep then break end
     end
 end)
 
-print("Fast Fuel TP (Auto Step Distance) Loaded!")
+print("Fuel TP (Adjusted Speed) Loaded!")
