@@ -155,7 +155,7 @@ AddToggle("AutoCollect Battery", "AutoCollectBattery.lua")
 AddToggle("AutoCollect Scrap", "AutoCollectScrap.lua")
 AddToggle("AutoCollect Fuel", "AutoCollectFuel.lua")
 AddToggle("Evasion Bloater", "AutoEvasion.lua")
-AddActionButton("Teleport Base", "TeleportToBase.lua")
+AddActionButton("Teleport To Base", "TeleportToBase.lua")
 
 AddSection("TRACKERS MENU")
 AddToggle("Locate Battery", "trackerv1.lua")
