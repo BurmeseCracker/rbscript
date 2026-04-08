@@ -12,7 +12,7 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_DIST = 200 
+local MAX_DIST = 100 
 local ANCHOR_TIME = 6 -- ၅ စက္ကန့် အသေချုပ်ထားမည်
 local TARGET_NAMES = {
     ["Battery"] = true, 
