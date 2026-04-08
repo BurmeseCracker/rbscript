@@ -12,7 +12,7 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_DIST = 50 -- အနီးနားတစ်ဝိုက် (၅၀ studs) အတွင်းပဲ ရှာမည်
+local MAX_DIST = 300 -- အနီးနားတစ်ဝိုက် (၅၀ studs) အတွင်းပဲ ရှာမည်
 local STUN_TIME = 30 -- မြေပေါ်ဆွဲချထားမည့် စက္ကန့်
 local TARGET_NAMES = {
     ["Battery"] = true, 
