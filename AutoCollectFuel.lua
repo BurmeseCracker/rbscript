@@ -58,7 +58,7 @@ _G.AutoFuelLoop = RunService.Heartbeat:Connect(function()
                     root.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
                     
                     -- ၂။ ခဏစောင့်ပြီး Remote ဖြင့် ကောက်ယူခြင်း
-                    task.wait(0.1) 
+                    task.wait(1) 
                     
                     local fuelTarget = item:FindFirstChild("Union") or item:FindFirstChildWhichIsA("BasePart") or item
                     PickUpRemote:FireServer(fuelTarget)
