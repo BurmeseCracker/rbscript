@@ -73,7 +73,7 @@ _G.AutoFuelLoop = RunService.Heartbeat:Connect(function()
                     isCollecting = false
                     
                     -- ၄။ ၃ စက္ကန့်ကြာလျှင် list ထဲက ပြန်ထုတ်မည်
-                    task.delay(1, function() 
+                    task.delay(2, function() 
                         processed[item] = nil 
                     end)
                     
