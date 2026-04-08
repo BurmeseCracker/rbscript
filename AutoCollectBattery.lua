@@ -12,8 +12,7 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_DIST = 300 -- အနီးနားတစ်ဝိုက် (၅၀ studs) အတွင်းပဲ ရှာမည်
-local STUN_TIME = 30 -- မြေပေါ်ဆွဲချထားမည့် စက္ကန့်
+local MAX_DIST = 100 -- အနီးနား 100 studs အတွင်း ရှာမည်
 local TARGET_NAMES = {
     ["Battery"] = true, 
     ["Battery Pack"] = true
@@ -21,27 +20,6 @@ local TARGET_NAMES = {
 
 local processed = {} 
 local isCollecting = false
-
--- Character ကို မြေပြင်ပေါ် ဖိချထားမည့် Function
-local function groundStun(hrp, duration)
-    -- လှည့်မသွားအောင် ထိန်းချုပ်ခြင်း
-    local bg = Instance.new("BodyGyro")
-    bg.P = 9e4
-    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-    bg.CFrame = hrp.CFrame
-    bg.Parent = hrp
-
-    -- အောက်ကို ဖိချထားခြင်း
-    local bv = Instance.new("BodyVelocity")
-    bv.Velocity = Vector3.new(0, -60, 0) -- -60 အရှိန်ဖြင့် မြေပေါ်ဖိချမည်
-    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-    bv.Parent = hrp
-
-    task.wait(duration) -- ၃၀ စက္ကန့်စောင့်မည်
-
-    bg:Destroy()
-    bv:Destroy()
-end
 
 -- Loop ဟောင်းရှိလျှင် ပိတ်မည်
 if _G.AutoBatteryLoop then 
@@ -74,34 +52,31 @@ _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
                 isCollecting = true
                 processed[item] = true 
                 
-                -- ၁။ Teleport လုပ်ခြင်း (Battery ရဲ့ အပေါ် ၂ ပေ)
+                -- ၁။ Battery ဆီသို့ တိုက်ရိုက် Teleport လုပ်ခြင်း
                 root.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
                 
-                -- ၂။ ကောက်ယူခြင်း (Background မှာ လုပ်မည်)
-                task.spawn(function()
-                    PickUpRemote:FireServer(item)
-                    task.wait(0.3)
-                    if item and item.Parent then 
-                        AdjustRemote:FireServer(item) 
-                    end
-                end)
-
-                -- ၃။ မြေပေါ်မှာ ၃၀ စက္ကန့် ဆွဲချထားခြင်း
-                print("🔋 Battery found nearby! Stunned for 30s.")
-                groundStun(root, STUN_TIME)
+                -- ၂။ ခဏစောင့်ပြီး Remote ဖြင့် ကောက်ယူခြင်း
+                task.wait(0.1) -- TP ပြီးတာနဲ့ ချက်ချင်းကောက်ရန်
+                PickUpRemote:FireServer(item)
                 
-                -- ၄။ Stun ပြီးမှ နောက်တစ်ခု ထပ်ရှာခွင့်ပေးမည်
+                task.wait(0.1)
+                if item and item.Parent then 
+                    AdjustRemote:FireServer(item) 
+                end
+
+                -- ၃။ နောက်တစ်ခုကို ချက်ချင်းသွားနိုင်ရန် Delay အနည်းငယ်သာထားမည်
+                task.wait(0.2)
                 isCollecting = false
                 
-                -- ၅။ ကောက်ပြီးသား Item ကို list ထဲက ခဏဖယ်မည်
-                task.delay(5, function() 
+                -- ၄။ ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
+                task.delay(3, function() 
                     processed[item] = nil 
                 end)
                 
-                break -- တစ်ကြိမ်လျှင် တစ်ခုသာ လုပ်ဆောင်မည်
+                break -- တစ်ကြိမ်လျှင် တစ်ခုစီ လျှင်မြန်စွာ သွားမည်
             end
         end
     end
 end)
 
-print("Radius Battery TP (30s Stun) Loaded!")
+print("Fast Battery TP (No Stun) Loaded!")
