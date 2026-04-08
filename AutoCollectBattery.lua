@@ -1,5 +1,5 @@
+-- [[ AutoCollectBattery - No Anchor Version ]] --
 local scriptID = "AutoCollectBattery" 
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -7,36 +7,19 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
--- Remotes
 local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
 local MAX_DIST = 100 
-local ANCHOR_TIME = 6 -- ၅ စက္ကန့် အသေချုပ်ထားမည်
-local TARGET_NAMES = {
-    ["Battery"] = true, 
-    ["Battery Pack"] = true
-}
+local HOLD_TIME = 6 
+local TARGET_NAMES = { ["Battery"] = true, ["Battery Pack"] = true }
 
 local processed = {} 
 local isCollecting = false
 
--- Loop ဟောင်းရှိလျှင် ပိတ်မည်
-if _G.AutoBatteryLoop then 
-    _G.AutoBatteryLoop:Disconnect() 
-    _G.AutoBatteryLoop = nil
-end
-
 _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
-    -- Menu က OFF ထားလျှင် ရပ်မည်
-    if _G[scriptID] ~= true then 
-        if _G.AutoBatteryLoop then
-            _G.AutoBatteryLoop:Disconnect()
-            _G.AutoBatteryLoop = nil
-        end
-        return 
-    end
+    if _G[scriptID] ~= true then return end
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -47,43 +30,39 @@ _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
             local success, pos = pcall(function() return item:GetPivot().Position end)
             if not success then continue end
             
-            -- အကွာအဝေး စစ်ဆေးခြင်း
-            local dist = (root.Position - pos).Magnitude
-            if dist <= MAX_DIST then
+            if (root.Position - pos).Magnitude <= MAX_DIST then
                 isCollecting = true
                 processed[item] = true 
                 
-                -- ၁။ Battery ဆီသို့ Teleport လုပ်ခြင်း
+                -- ၁။ Teleport လုပ်မယ်
                 root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
-                
-                -- ၂။ မူလနေရာ ပြန်မရောက်အောင် Anchor လုပ်ခြင်း
-                root.Anchored = true
-                print("⚡ Teleported & Anchored for 5 seconds...")
 
-                -- ၃။ Remote ဖြင့် ကောက်ယူခြင်း
+                -- ၂။ FORCE HOLD (Anchor အစားသုံးသည်)
+                -- Character ကို အင်အားသုံးပြီး နေရာမှာ ရပ်ခိုင်းထားမယ်
+                local attachment = Instance.new("Attachment", root)
+                local alignPos = Instance.new("AlignPosition", root)
+                alignPos.Attachment0 = attachment
+                alignPos.Mode = Enum.PositionAlignmentMode.OneAttachment
+                alignPos.Position = root.Position
+                alignPos.MaxForce = 9999999
+                alignPos.Responsiveness = 200
+
+                -- ၃။ Remote ဖြင့် ကောက်မယ်
                 task.spawn(function()
                     PickUpRemote:FireServer(item)
                     task.wait(0.2)
-                    if item and item.Parent then 
-                        AdjustRemote:FireServer(item) 
-                    end
+                    if item and item.Parent then AdjustRemote:FireServer(item) end
                 end)
 
-                -- ၄။ ၅ စက္ကန့်ပြည့်အောင်စောင့်ပြီးမှ Anchor ဖြုတ်ခြင်း
-                task.wait(ANCHOR_TIME)
-                root.Anchored = false
+                -- ၄။ စောင့်ဆိုင်းပြီး Force ပြန်ဖြုတ်မယ်
+                task.wait(HOLD_TIME)
+                alignPos:Destroy()
+                attachment:Destroy()
+                
                 isCollecting = false
-                
-                -- ၅။ ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
-                task.delay(2, function() 
-                    processed[item] = nil 
-                end)
-                
-                break -- တစ်ကြိမ်လျှင် တစ်ခုစီ သွားမည်
+                task.delay(2, function() processed[item] = nil end)
+                break 
             end
         end
     end
 end)
-
-print("Battery TP (5s Anchor Loop) Loaded!")
-
