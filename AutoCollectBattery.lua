@@ -65,7 +65,7 @@ _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
                 end
 
                 -- ၃။ နောက်တစ်ခုကို ချက်ချင်းသွားနိုင်ရန် Delay အနည်းငယ်သာထားမည်
-                task.wait(0.2)
+                task.wait(0.1)
                 isCollecting = false
                 
                 -- ၄။ ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
