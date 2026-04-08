@@ -12,7 +12,7 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_DIST = 70
+local MAX_DIST = 60 
 local TARGET_NAMES = {
     ["Battery"] = true, 
     ["Battery Pack"] = true
@@ -28,7 +28,14 @@ if _G.AutoBatteryLoop then
 end
 
 _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
-    if _G[scriptID] ~= true then return end
+    -- Menu က OFF ထားလျှင် Loop ကို ဖြတ်မည်
+    if _G[scriptID] ~= true then 
+        if _G.AutoBatteryLoop then
+            _G.AutoBatteryLoop:Disconnect()
+            _G.AutoBatteryLoop = nil
+        end
+        return 
+    end
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -44,38 +51,43 @@ _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
                 isCollecting = true
                 processed[item] = true 
                 
-                -- [ STABILIZER ဖန်တီးခြင်း ]
-                -- Character ကို မတ်မတ်ရပ်နေအောင် ထိန်းပေးမည်
+                -- [ STABILIZER ] Character ငြိမ်အောင် အရင်လုပ်မယ်
                 local gyro = Instance.new("BodyGyro")
                 gyro.P = 3000
-                gyro.D = 500
                 gyro.MaxTorque = Vector3.new(400000, 400000, 400000)
-                gyro.CFrame = root.CFrame -- လက်ရှိကြည့်နေတဲ့ လားရာအတိုင်း ငြိမ်အောင်ထားမည်
+                gyro.CFrame = root.CFrame
                 gyro.Parent = root
 
+                -- [ LOOP TELEPORT LOGIC ] 
+                -- ကောက်လို့ပြီးတဲ့အထိ (သို့) ၃ စက္ကန့်ပြည့်တဲ့အထိ Battery ဘေးမှာ ဇွတ်ကပ်နေမယ်
                 local startTime = tick()
-                while item and item.Parent and (tick() - startTime) < 5 do
-                    -- Battery ရဲ့ ဘေးနား ၂ ပေ အကွာ၊ မြေပြင်ပေါ် ၀.၅ ပေမှာ Loop TP လုပ်မည်
+                while item and item.Parent and (tick() - startTime) < 3 do
+                    -- Battery ရဲ့ ဘေးနား ၂ ပေ၊ မြေပြင်ပေါ် ၀.၅ ပေမှာ Loop TP လုပ်ခြင်း
                     root.CFrame = CFrame.new(pos) * CFrame.new(2, 0.5, 0)
                     
-                    -- Remote ပစ်ခြင်း
+                    -- Remote ပစ်ခြင်း (ပထမ ၀.၂ စက္ကန့်အတွင်းပဲ ပစ်မယ်)
                     if (tick() - startTime) < 0.2 then
                         PickUpRemote:FireServer(item)
                     end
                     
-                    RunService.Heartbeat:Wait()
+                    RunService.Heartbeat:Wait() -- တစ်စက္ကန့်ကို အကြိမ် ၆၀ နီးပါး TP ပြန်လုပ်ပေးနေမှာပါ
                 end
                 
-                -- ပြီးသွားရင် Stabilizer ကို ပြန်ဖျက်မည်
+                -- Cleanup & Next
                 gyro:Destroy()
                 AdjustRemote:FireServer(item)
 
                 isCollecting = false
-                task.delay(1.5, function() processed[item] = nil end)
-                break 
+                
+                -- ၃ စက္ကန့်အကြာမှ ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
+                task.delay(3, function() 
+                    processed[item] = nil 
+                end)
+                
+                break -- တစ်ကြိမ်လျှင် တစ်ခုစီ လျှင်မြန်စွာ သွားမည်
             end
         end
     end
 end)
 
-print("Battery TP with BodyGyro Stabilizer Loaded!")
+print("Fast Side-Loop Battery TP Loaded!")
