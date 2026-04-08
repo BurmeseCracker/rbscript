@@ -57,7 +57,7 @@ _G.AutoFuelLoop = RunService.Heartbeat:Connect(function()
                     root.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
                     
                     -- ၂။ TP မြန်လွန်းတာကို ထိန်းရန် ဒီမှာ ၀.၃ စက္ကန့် စောင့်ခိုင်းလိုက်ပါတယ် (Video ပုံစံအတိုင်းဖြစ်စေရန်)
-                    task.wait(0.3) 
+                    task.wait(5) 
                     
                     local fuelTarget = item:FindFirstChild("Union") or item:FindFirstChildWhichIsA("BasePart") or item
                     PickUpRemote:FireServer(fuelTarget)
