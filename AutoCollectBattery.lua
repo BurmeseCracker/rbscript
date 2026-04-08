@@ -12,7 +12,7 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_DIST = 50 -- အနီးနား 100 studs အတွင်း ရှာမည်
+local MAX_DIST = 100 
 local TARGET_NAMES = {
     ["Battery"] = true, 
     ["Battery Pack"] = true
@@ -30,10 +30,6 @@ end
 _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
     -- Menu က OFF ထားလျှင် ရပ်မည်
     if _G[scriptID] ~= true then 
-        if _G.AutoBatteryLoop then
-            _G.AutoBatteryLoop:Disconnect()
-            _G.AutoBatteryLoop = nil
-        end
         return 
     end
 
@@ -46,37 +42,41 @@ _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
             local success, pos = pcall(function() return item:GetPivot().Position end)
             if not success then continue end
             
-            -- အကွာအဝေး စစ်ဆေးခြင်း
             local dist = (root.Position - pos).Magnitude
             if dist <= MAX_DIST then
                 isCollecting = true
                 processed[item] = true 
                 
-                -- ၁။ Battery ဆီသို့ တိုက်ရိုက် Teleport လုပ်ခြင်း
-                root.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
-                
-                -- ၂။ ခဏစောင့်ပြီး Remote ဖြင့် ကောက်ယူခြင်း
-                task.wait(0.1) -- TP ပြီးတာနဲ့ ချက်ချင်းကောက်ရန်
-                PickUpRemote:FireServer(item)
-                
-                task.wait(0.1)
-                if item and item.Parent then 
-                    AdjustRemote:FireServer(item) 
-                end
+                print("🔋 Starting Loop Teleport to Battery...")
 
-                -- ၃။ နောက်တစ်ခုကို ချက်ချင်းသွားနိုင်ရန် Delay အနည်းငယ်သာထားမည်
-                task.wait(0.1)
+                -- [ LOOP TELEPORT LOGIC ]
+                -- Item ပျောက်သွားတဲ့အထိ (သို့မဟုတ်) ၆ စက္ကန့်ပြည့်တဲ့အထိ အဲ့ဒီနေရာကိုပဲ အတင်းပို့နေမယ်
+                local startTime = tick()
+                while item and item.Parent and (tick() - startTime) < 6 do
+                    root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                    
+                    -- Remote ကို တစ်ခါပဲ ပစ်မယ်
+                    if (tick() - startTime) < 0.2 then
+                        PickUpRemote:FireServer(item)
+                    end
+                    
+                    RunService.Heartbeat:Wait() -- တစ်စက္ကန့်ကို အကြိမ် ၆၀ နီးပါး TP ပြန်လုပ်ပေးနေမှာပါ
+                end
+                
+                -- Backpack ထဲ ထည့်မယ်
+                AdjustRemote:FireServer(item)
+
                 isCollecting = false
                 
-                -- ၄။ ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
-                task.delay(3, function() 
+                -- ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
+                task.delay(2, function() 
                     processed[item] = nil 
                 end)
                 
-                break -- တစ်ကြိမ်လျှင် တစ်ခုစီ လျှင်မြန်စွာ သွားမည်
+                break 
             end
         end
     end
 end)
 
-print("Fast Battery TP (No Stun) Loaded!")
+print("Battery Loop Teleport Loaded!")
