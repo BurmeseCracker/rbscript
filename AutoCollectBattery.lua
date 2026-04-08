@@ -12,7 +12,7 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_DIST = 100 
+local MAX_DIST = 40 
 local TARGET_NAMES = {
     ["Battery"] = true, 
     ["Battery Pack"] = true
@@ -47,29 +47,30 @@ _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
                 isCollecting = true
                 processed[item] = true 
                 
-                print("🔋 Starting Loop Teleport to Battery...")
+                print("🔋 Teleporting to Side of Battery...")
 
-                -- [ LOOP TELEPORT LOGIC ]
-                -- Item ပျောက်သွားတဲ့အထိ (သို့မဟုတ်) ၆ စက္ကန့်ပြည့်တဲ့အထိ အဲ့ဒီနေရာကိုပဲ အတင်းပို့နေမယ်
+                -- [ SIDE LOOP TELEPORT LOGIC ]
                 local startTime = tick()
-                while item and item.Parent and (tick() - startTime) < 6 do
-                    root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                while item and item.Parent and (tick() - startTime) < 5 do
+                    -- Battery ရဲ့ ဘေးနား (X axis + 2) မှာ ပေါ်စေခြင်း
+                    -- မြေကြီးထဲ မနစ်အောင် Y ကို 0.5 လောက်ပဲ မြှင့်ထားတယ်
+                    root.CFrame = CFrame.new(pos) * CFrame.new(2, 0.5, 0)
                     
-                    -- Remote ကို တစ်ခါပဲ ပစ်မယ်
+                    -- Remote ပစ်ခြင်း
                     if (tick() - startTime) < 0.2 then
                         PickUpRemote:FireServer(item)
                     end
                     
-                    RunService.Heartbeat:Wait() -- တစ်စက္ကန့်ကို အကြိမ် ၆၀ နီးပါး TP ပြန်လုပ်ပေးနေမှာပါ
+                    RunService.Heartbeat:Wait()
                 end
                 
-                -- Backpack ထဲ ထည့်မယ်
+                -- Backpack ညှိခြင်း
                 AdjustRemote:FireServer(item)
 
                 isCollecting = false
                 
                 -- ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
-                task.delay(2, function() 
+                task.delay(1.5, function() 
                     processed[item] = nil 
                 end)
                 
@@ -79,4 +80,4 @@ _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Battery Loop Teleport Loaded!")
+print("Battery Side-TP Loop Loaded!")
