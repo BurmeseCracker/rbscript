@@ -9,7 +9,7 @@ local function ultimateVoidDrop()
     
     if hrp then
         -- ၄ ကြိမ် လုပ်ဆောင်ရန် Loop ပတ်မည်
-        for i = 1, 4 do
+        for i = 1, 3 do
             print("Void Drop Round: " .. i)
 
             -- ၁။ Server ပြန်မဆွဲနိုင်အောင် ခေတ္တ Anchor လုပ်မယ်
