@@ -39,7 +39,8 @@ _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root or isCollecting then return end
+    local hum = char and char:FindFirstChild("Humanoid")
+    if not root or not hum or isCollecting then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
@@ -51,43 +52,37 @@ _G.AutoBatteryLoop = RunService.Heartbeat:Connect(function()
                 isCollecting = true
                 processed[item] = true 
                 
-                -- [ STABILIZER ] Character ငြိမ်အောင် အရင်လုပ်မယ်
-                local gyro = Instance.new("BodyGyro")
-                gyro.P = 3000
-                gyro.MaxTorque = Vector3.new(400000, 400000, 400000)
-                gyro.CFrame = root.CFrame
-                gyro.Parent = root
-
-                -- [ LOOP TELEPORT LOGIC ] 
-                -- ကောက်လို့ပြီးတဲ့အထိ (သို့) ၃ စက္ကန့်ပြည့်တဲ့အထိ Battery ဘေးမှာ ဇွတ်ကပ်နေမယ်
+                -- [ LOOP TELEPORT + INSTANT JUMP LOGIC ] 
                 local startTime = tick()
                 while item and item.Parent and (tick() - startTime) < 3 do
-                    -- Battery ရဲ့ ဘေးနား ၂ ပေ၊ မြေပြင်ပေါ် ၀.၅ ပေမှာ Loop TP လုပ်ခြင်း
+                    -- Battery ရဲ့ ဘေးနားကို Loop TP လုပ်မယ်
                     root.CFrame = CFrame.new(pos) * CFrame.new(2, 0.5, 0)
                     
-                    -- Remote ပစ်ခြင်း (ပထမ ၀.၂ စက္ကန့်အတွင်းပဲ ပစ်မယ်)
+                    -- Instant Jumping (Loop ထဲမှာ ခုန်ခိုင်းထားမယ်)
+                    hum.Jump = true
+                    
+                    -- Remote ပစ်ခြင်း (ကောက်ရန် အမိန့်ပေးခြင်း)
                     if (tick() - startTime) < 0.2 then
                         PickUpRemote:FireServer(item)
                     end
                     
-                    RunService.Heartbeat:Wait() -- တစ်စက္ကန့်ကို အကြိမ် ၆၀ နီးပါး TP ပြန်လုပ်ပေးနေမှာပါ
+                    RunService.Heartbeat:Wait()
                 end
                 
-                -- Cleanup & Next
-                gyro:Destroy()
+                -- Backpack ညှိခြင်း
                 AdjustRemote:FireServer(item)
 
                 isCollecting = false
                 
-                -- ၃ စက္ကန့်အကြာမှ ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
+                -- ကောက်ပြီးသား item ကို list ထဲက ပြန်ဖြုတ်မည်
                 task.delay(3, function() 
                     processed[item] = nil 
                 end)
                 
-                break -- တစ်ကြိမ်လျှင် တစ်ခုစီ လျှင်မြန်စွာ သွားမည်
+                break 
             end
         end
     end
 end)
 
-print("Fast Side-Loop Battery TP Loaded!")
+print("Fast Side-Loop TP + Instant Jump Loaded!")
