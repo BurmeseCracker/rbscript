@@ -184,6 +184,7 @@ AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
     _G["trackerv4"] = false
     _G["trackerv5"] = false
     _G["anti-lag"] = false
+    _G["hitbox"] = false
     
     task.wait(0.3)
     ScreenGui:Destroy()
