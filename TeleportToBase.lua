@@ -27,7 +27,7 @@ local function ultimateVoidDrop()
 
     if hrp and hum then
         -- ၄ ကြိမ် လုပ်ဆောင်ရန် Loop
-        for i = 1, 4 do
+        for i = 1, 2 do
             print("Void Drop Round: " .. i)
 
             -- ၁။ Position ကို အောက်သို့ ရွှေ့ခြင်း
