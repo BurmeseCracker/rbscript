@@ -152,12 +152,9 @@ AddToggle("Speed Hack", "speed.lua")
 AddToggle("Wall Hack", "noclip.lua")
 AddToggle("Jump Height", "jump.lua")
 
-
-
-AddToggle("Evasion Bloater", "AutoEvasion.lua")
 AddActionButton("Teleport To Base", "TeleportToBase.lua")
 
-AddSection("TRACKERS MENU")
+AddSection("Items MENU")
 AddToggle("Locate Battery", "trackerv1.lua")
 AddToggle("AutoCollect Battery", "AutoCollectBattery.lua")
 AddToggle("Locate Scraps", "trackerv2.lua")
@@ -166,6 +163,9 @@ AddToggle("Locate Foods", "trackerv3.lua")
 AddToggle("Locate Fuel", "trackerv4.lua")
 AddToggle("AutoCollect Fuel", "AutoCollectFuel.lua")
 AddToggle("Locate Crate", "trackerv5.lua")
+
+AddSection("Bot/NPC MENU")
+AddToggle("Evasion Bloater", "AutoEvasion.lua")
 
 AddSection("SETTINGS MENU")
 AddToggle("Anti-lag", "anti-lag.lua")
