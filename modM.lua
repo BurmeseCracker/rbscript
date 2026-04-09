@@ -103,7 +103,7 @@ local function AddActionButton(name, fileName)
     orderCount = orderCount + 1
     local Button = Instance.new("TextButton", Scroll)
     Button.Size = UDim2.new(1, 0, 0, 40)
-    Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    Button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     Button.Text = name
     Button.TextColor3 = Color3.new(1, 1, 1)
     Button.Font = Enum.Font.GothamBold
