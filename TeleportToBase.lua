@@ -1,43 +1,56 @@
--- [[ ULTIMATE VOID DROP - 4 TIMES LOOP ]] --
+-- [[ ULTIMATE VOID DROP - NOCLIP & 4 TIMES LOOP ]] --
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
 local function ultimateVoidDrop()
     local char = player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not char then return warn("Character not found!") end
     
-    if hrp then
-        -- ၄ ကြိမ် လုပ်ဆောင်ရန် Loop ပတ်မည်
-        for i = 1, 3 do
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+
+    -- Noclip အလုပ်လုပ်ရန် logic (မြေပြင်ကို ဖောက်ထွက်ရန်)
+    local noclipConnection
+    noclipConnection = RunService.Stepped:Connect(function()
+        if char then
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        else
+            noclipConnection:Disconnect()
+        end
+    end)
+
+    if hrp and hum then
+        -- ၄ ကြိမ် လုပ်ဆောင်ရန် Loop
+        for i = 1, 4 do
             print("Void Drop Round: " .. i)
 
-            -- ၁။ Server ပြန်မဆွဲနိုင်အောင် ခေတ္တ Anchor လုပ်မယ်
+            -- ၁။ Position ကို အောက်သို့ ရွှေ့ခြင်း
             hrp.Anchored = true
             task.wait(0.1)
-
-            -- ၂။ အောက်ကို -100 studs ချမယ် (စုစုပေါင်း ၄ ကြိမ်ဆိုတော့ -400 ကျော်သွားပါမယ်)
-            hrp.CFrame = hrp.CFrame * CFrame.new(0, -100, 0)
             
-            -- ၃။ ဖြည်းဖြည်းချင်း ထပ်တွန်းချမည့် Loop (အသေးစား)
-            for j = 1, 5 do
-                hrp.CFrame = hrp.CFrame * CFrame.new(0, -10, 0)
-                task.wait(0.03)
-            end
-
-            -- ၄။ Anchor ပြန်ဖြုတ်ပြီး အရှိန်နဲ့ ကျခိုင်းမယ်
+            -- လက်ရှိနေရာထက် -150 studs အောက်ကို ရွှေ့မည်
+            hrp.CFrame = hrp.CFrame * CFrame.new(0, -150, 0)
             hrp.Anchored = false
-            hrp.AssemblyLinearVelocity = Vector3.new(0, -250, 0)
 
-            -- ၅။ နောက်တစ်ကြိမ် မစခင် ခဏစောင့်မယ်
-            task.wait(0.5)
+            -- ၂။ ကျဆင်းနေစဉ် အရှိန်မြှင့်ရန် Velocity ထည့်ခြင်း
+            hrp.AssemblyLinearVelocity = Vector3.new(0, -500, 0)
+
+            -- ၃။ ခေတ္တစောင့်ပြီး အရှိန်သတ်မည် (နောက်တစ်ကျော့ မစခင်)
+            task.wait(0.6)
         end
         
-        print("Completed 4 Rounds of Void Drop!")
-    else
-        warn("Character not found!")
+        -- Noclip ကို ပြန်ပိတ်ရန် (Optional: အကယ်၍ အောက်ခြေရောက်လျှင် ပြန်ဖွင့်ချင်ပါက)
+        task.wait(1)
+        noclipConnection:Disconnect()
+        print("Completed 4 Rounds of Noclip Void Drop!")
     end
 end
 
--- Script ကို Run သည်နှင့် အလုပ်လုပ်မည်
+-- Script Run မည်
 ultimateVoidDrop()
