@@ -166,6 +166,7 @@ AddToggle("Locate Crate", "trackerv5.lua")
 
 AddSection("Bot/NPC MENU")
 AddToggle("Evasion Bloater", "AutoEvasion.lua")
+AddToggle("HitBox Expander", "hitbox.lua")
 
 AddSection("SETTINGS MENU")
 AddToggle("Anti-lag", "anti-lag.lua")
