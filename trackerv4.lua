@@ -1,7 +1,6 @@
--- [[ trackerv4.lua - Fuel Master (STRICT TP COLLECT) ]] --
+-- [[ trackerv4.lua - Fuel Master (STABLE TP) ]] --
 local scriptID = "trackerv4" 
 
--- Wait for Menu Toggle
 if _G[scriptID] ~= true then
     repeat task.wait(0.5) until _G[scriptID] == true
 end
@@ -12,12 +11,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
--- Remotes
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
--- CONFIG
 local MAX_VISUAL_DIST = 150 
 local COLLECT_DIST = 40     
 local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
@@ -25,7 +22,6 @@ local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
 local v4Beams = {}
 local processed = {}
 
--- [[ BEAM LOGIC ]] --
 local function removeV4Path(model)
     local data = v4Beams[model]
     if data then
@@ -40,8 +36,7 @@ end
 
 local function createV4Path(model, root)
     if v4Beams[model] then return end
-    -- Check for Union or any BasePart
-    local targetPart = model:FindFirstChild("Union") or model:FindFirstChildWhichIsA("BasePart") or model.PrimaryPart
+    local targetPart = model:FindFirstChild("Union") or model:FindFirstChildWhichIsA("BasePart")
     if not targetPart then return end
 
     local attP = Instance.new("Attachment", root)
@@ -54,7 +49,6 @@ local function createV4Path(model, root)
     v4Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
--- [[ MAIN LOOP ]] --
 if _G.FuelMasterLoop then _G.FuelMasterLoop:Disconnect() end
 
 _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
@@ -69,14 +63,13 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
-            -- Get the target part (usually Union for Fuel)
             local targetPart = item:FindFirstChild("Union") or item:FindFirstChildWhichIsA("BasePart")
             if not targetPart then continue end
             
             local targetCFrame = targetPart.CFrame
             local dist = (root.Position - targetCFrame.Position).Magnitude
 
-            -- 1. SHOW BEAMS
+            -- 1. BEAMS (Stays until item is actually GONE)
             if dist <= MAX_VISUAL_DIST then
                 createV4Path(item, root)
             else
@@ -86,21 +79,21 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
             -- 2. TP COLLECTION
             if dist <= COLLECT_DIST then
                 processed[item] = true
-                removeV4Path(item)
 
                 task.spawn(function()
-                    -- Move the character to the item
+                    -- Teleport
                     char:PivotTo(targetCFrame * CFrame.new(0, 3, 0))
                     
-                    -- Crucial delay for the server to update your position
-                    task.wait(0.15) 
+                    task.wait(0.2) -- Longer wait for server sync
                     
-                    -- Collection Remotes
+                    -- Pickup
                     PickUpRemote:FireServer(item)
                     task.wait(0.1)
                     
-                    if item and item.Parent then
+                    -- Only remove beam and adjust if it actually worked
+                    if item.Parent ~= SEARCH_FOLDER then
                         AdjustRemote:FireServer(item)
+                        removeV4Path(item) 
                     end
                     
                     task.wait(2)
