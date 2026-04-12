@@ -8,7 +8,7 @@ local camera = Workspace.CurrentCamera
 
 -- Config
 local TARGET_NAME = "Bloater" 
-local AIM_DISTANCE = 100
+local AIM_DISTANCE = 40
 local isAiming = false -- Aim လုပ်နေသလား စစ်ရန်
 
 -- Mouse ညာဘက်ခလုတ် ဖိထားခြင်း ရှိ/မရှိ စစ်ဆေးခြင်း
