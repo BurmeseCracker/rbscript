@@ -1,7 +1,6 @@
--- [[ trackerv4.lua - Fuel Master (UNIONS + RANGE COLLECT) ]] --
+-- [[ trackerv3.lua - Fuel Master ]] --
 local scriptID = "trackerv4" 
 
--- 1. Sync with Menu Toggle
 if _G[scriptID] ~= true then
     repeat task.wait(0.5) until _G[scriptID] == true
 end
@@ -12,95 +11,103 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
--- Remotes
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
-local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
+local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Interaction"):WaitForChild("PickUpItem")
+local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
--- CONFIG
-local MAX_DISTANCE = 200 
-local COLLECT_DIST = 35    
-local TARGET_NAMES = { ["Fuel"] = true, ["Refined Fuel"] = true }
+-- [[ CONFIG ]] --
+local MAX_VISUAL_DIST = 150
+local TRIGGER_DIST = 40 
+local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
 
-if _G.TrackerV4Loop then _G.TrackerV4Loop:Disconnect() end
-_G.v4Beams = _G.v4Beams or {}
+local v3Beams = {}
 local processed = {}
+local isCollecting = false
 
--- Cleanup Helper
-local function removeSingleV4(item)
-    local data = _G.v4Beams[item]
+local function removeV3Path(model)
+    local data = v3Beams[model]
     if data then
         pcall(function()
             if data.beam then data.beam:Destroy() end
             if data.aP then data.aP:Destroy() end
             if data.aB then data.aB:Destroy() end
         end)
-        _G.v4Beams[item] = nil
+        v3Beams[model] = nil
     end
 end
 
-local function clearAllV4()
-    for item, _ in pairs(_G.v4Beams) do
-        removeSingleV4(item)
-    end
-    _G.v4Beams = {}
+local function createV3Path(model, root)
+    if v3Beams[model] then return end
+    local targetPart = model:FindFirstChild("Union") or model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
+    if not targetPart then return end
+
+    local attP = Instance.new("Attachment", root)
+    local attB = Instance.new("Attachment", targetPart)
+    local beam = Instance.new("Beam", root)
+    beam.Attachment0, beam.Attachment1 = attP, attB
+    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Red
+    beam.Width0, beam.Width1 = 0.6, 0.6
+    beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2; beam.FaceCamera = true
+    v3Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
--- [[ MAIN LOOP ]] --
-_G.TrackerV4Loop = RunService.Heartbeat:Connect(function()
-    -- Stop loop if menu toggle is OFF
-    if _G[scriptID] ~= true then
-        clearAllV4()
-        if _G.TrackerV4Loop then _G.TrackerV4Loop:Disconnect() end
-        _G.TrackerV4Loop = nil
-        return
+if _G.FuelMasterLoop then _G.FuelMasterLoop:Disconnect() end
+
+_G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
+    if _G[scriptID] ~= true then 
+        for model, _ in pairs(v3Beams) do removeV3Path(model) end
+        return 
     end
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    if not root or isCollecting then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-        -- Strict check for Unions/Parts named Fuel
-        if TARGET_NAMES[item.Name] and (item:IsA("BasePart") or item:IsA("UnionOperation")) then
-            local itemPos = item.Position
-            local dist = (root.Position - itemPos).Magnitude
-            
-            -- A. Beam Logic
-            if dist <= MAX_DISTANCE and not processed[item] then
-                if not _G.v4Beams[item] then
-                    local attP = Instance.new("Attachment", root)
-                    local attB = Instance.new("Attachment", item)
-                    local beam = Instance.new("Beam", root)
-                    
-                    beam.Attachment0, beam.Attachment1 = attP, attB
-                    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Red
-                    beam.Width0, beam.Width1 = 0.35, 0.35
-                    beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2.5; beam.FaceCamera = true
-                    
-                    _G.v4Beams[item] = {beam = beam, aP = attP, aB = attB}
-                end
+        if TARGET_NAMES[item.Name] and not processed[item] then
+            local pos = item:GetPivot().Position
+            local dist = (root.Position - pos).Magnitude
+
+            -- 1. SHOW RED BEAMS
+            if dist <= MAX_VISUAL_DIST then
+                createV3Path(item, root)
             else
-                removeSingleV4(item)
+                removeV3Path(item)
             end
 
-            -- B. Collection Logic (Range-based, no teleport)
-            if dist <= COLLECT_DIST and not processed[item] then
-                processed[item] = true
-                removeSingleV4(item)
+            -- 2. TP & COLLECT LOGIC
+            if dist <= TRIGGER_DIST then
+                local targetPart = item:FindFirstChild("Union") or item:FindFirstChildWhichIsA("BasePart")
+                local dragRemote = item:FindFirstChild("ItemDrag") and item.ItemDrag:FindFirstChild("RequestNetworkOwnership")
                 
-                task.spawn(function()
-                    -- Direct pickup remote
-                    PickUpRemote:FireServer(item)
-                    task.wait(0.2)
+                if targetPart and dragRemote then
+                    isCollecting = true
+                    processed[item] = true
                     
-                    if item and item.Parent then 
-                        AdjustRemote:FireServer(item) 
-                    end
-                    
-                    task.wait(2) -- Cooldown for this specific object
-                    processed[item] = nil
-                end)
+                    task.spawn(function()
+                        -- TP Character
+                        root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                        
+                        -- Request Ownership of the Union
+                        dragRemote:FireServer(targetPart)
+                        task.wait(0.1)
+                        
+                        -- Force Bring Loop
+                        local startTime = tick()
+                        while tick() - startTime < 1.0 and item and item.Parent do
+                            item:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
+                            if tick() - startTime > 0.05 then
+                                PickUpRemote:FireServer(item)
+                            end
+                            RunService.Heartbeat:Wait()
+                        end
+                        
+                        if item and item.Parent then AdjustRemote:FireServer(item) end
+                        task.wait(0.1)
+                        isCollecting = false
+                        task.delay(3, function() processed[item] = nil end)
+                    end)
+                    break 
+                end
             end
         end
     end
