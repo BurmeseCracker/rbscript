@@ -10,8 +10,9 @@ local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
 -- Config
 local MAX_DISTANCE = 200
+local BRING_DISTANCE = 20 -- Distance to teleport item to you
 local TARGET_NAME = "Battery"
-local v1Beams = {} -- Unique table for this script
+local v1Beams = {}
 
 local function removeV1Path(model)
     local data = v1Beams[model]
@@ -28,7 +29,6 @@ local function createV1Path(model, root)
     local targetPart = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart") or model:FindFirstChild("Handle")
     if not targetPart then return end
 
-    -- Create Visuals
     local attP = Instance.new("Attachment", root)
     local attB = Instance.new("Attachment", targetPart)
     local beam = Instance.new("Beam")
@@ -47,7 +47,7 @@ end
 
 -- THE LOOP
 task.spawn(function()
-    print("Tracker V1: ACTIVE")
+    print("Tracker V1: ACTIVE (With Bring)")
     while _G[scriptID] == true do
         local char = player.Character
         local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -55,9 +55,17 @@ task.spawn(function()
         if root then
             for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
                 if item.Name == TARGET_NAME then
-                    local dist = (root.Position - item:GetPivot().Position).Magnitude
+                    local itemPos = item:GetPivot().Position
+                    local dist = (root.Position - itemPos).Magnitude
+                    
                     if dist <= MAX_DISTANCE then
                         createV1Path(item, root)
+                        
+                        -- [[ BRING LOGIC ]] --
+                        if dist <= BRING_DISTANCE then
+                            -- Teleport the item to your feet
+                            item:PivotTo(root.CFrame * CFrame.new(0, -2, 0))
+                        end
                     else
                         removeV1Path(item)
                     end
@@ -71,10 +79,9 @@ task.spawn(function()
                 end
             end
         end
-        task.wait(0.5)
+        task.wait(0.1) -- Faster check for smoother "Bring"
     end
     
-    -- Final Cleanup
     for model, _ in pairs(v1Beams) do removeV1Path(model) end
     print("Tracker V1: STOPPED")
 end)
