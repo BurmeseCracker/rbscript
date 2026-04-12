@@ -1,4 +1,4 @@
--- [[ trackerv2.lua - Scrap Master (VISUAL BEAMS + REMOTE COLLECT) ]] --
+-- [[ trackerv2.lua - Scrap Master (STRICT TOGGLE + SYNC) ]] --
 local scriptID = "trackerv2" 
 
 if _G[scriptID] ~= true then
@@ -10,18 +10,16 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- Folders
-local DROP_FOLDER = workspace:WaitForChild("DroppedItems") -- Where Scrap items drop
-local PILE_FOLDER = workspace:WaitForChild("Structures")   -- Where Piles are located
+local DROP_FOLDER = workspace:WaitForChild("DroppedItems")
+local PILE_FOLDER = workspace:WaitForChild("Structures") 
 
--- Remotes
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local TRACK_DIST = 150     -- Distance to see Beams
-local COLLECT_DIST = 40    -- Manual range to auto-fire the pickup remote
+local TRACK_DIST = 150    
+local COLLECT_DIST = 35    
 local ITEM_NAME = "Scrap"
 local PILE_NAME = "Scrap Pile"
 
@@ -41,6 +39,12 @@ local function removePath(model)
     end
 end
 
+local function clearAllBeams()
+    for model, _ in pairs(activeBeams) do
+        removePath(model)
+    end
+end
+
 local function createPath(model, root, color)
     if activeBeams[model] then return end
     local targetPart = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
@@ -56,11 +60,13 @@ local function createPath(model, root, color)
     activeBeams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
+-- [[ MAIN LOOP ]] --
 if _G.ScrapMasterLoop then _G.ScrapMasterLoop:Disconnect() end
 
 _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
+    -- CRITICAL: If Menu is OFF, destroy all beams and stop
     if _G[scriptID] ~= true then 
-        for model, _ in pairs(activeBeams) do removePath(model) end
+        clearAllBeams()
         return 
     end
 
@@ -68,7 +74,7 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     local root = char and char:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
-    -- [[ 1. TRACK SCRAP PILES (CYAN BEAMS) ]] --
+    -- 1. TRACK SCRAP PILES (CYAN)
     for _, pile in pairs(PILE_FOLDER:GetChildren()) do
         if pile.Name == PILE_NAME then
             local dist = (root.Position - pile:GetPivot().Position).Magnitude
@@ -80,39 +86,45 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
 
-    -- [[ 2. TRACK & COLLECT DROPPED SCRAP (WHITE BEAMS) ]] --
+    -- 2. TRACK & COLLECT DROPPED SCRAP (WHITE)
     for _, item in pairs(DROP_FOLDER:GetChildren()) do
-        if item.Name == ITEM_NAME then
+        if item.Name == ITEM_NAME and not processedItems[item] then
             local pos = item:GetPivot().Position
             local dist = (root.Position - pos).Magnitude
 
-            -- Show Beam for loose items
-            if dist <= TRACK_DIST and not processedItems[item] then
+            if dist <= TRACK_DIST then
                 createPath(item, root, Color3.fromRGB(255, 255, 255))
             else
                 removePath(item)
             end
 
-            -- Auto-PickUp when you walk close enough
-            if dist <= COLLECT_DIST and not processedItems[item] then
+            -- INSTANT SYNC PICKUP
+            if dist <= COLLECT_DIST then
                 processedItems[item] = true
-                removePath(item)
-                
+
                 task.spawn(function()
-                    local start = tick()
-                    -- Spam the remote briefly to ensure capture
-                    while tick() - start < 1.0 and item and item.Parent do
-                        PickUpRemote:FireServer(item)
-                        task.wait(0.1)
-                    end
+                    task.wait(0.1) -- Stability delay
                     
-                    if item and item.Parent then AdjustRemote:FireServer(item) end
-                    task.wait(2)
+                    -- Instant Sync fire
+                    PickUpRemote:FireServer(item)
+                    AdjustRemote:FireServer(item)
+                    
+                    task.wait(0.2)
+                    removePath(item)
+                    
+                    task.wait(2.5) -- Cooldown
                     processedItems[item] = nil
                 end)
             end
         end
     end
+    
+    -- Cleanup orphaned beams (if item was deleted/stolen)
+    for model, _ in pairs(activeBeams) do
+        if not model or not model.Parent then
+            removePath(model)
+        end
+    end
 end)
 
-print("Scrap Master (Visuals Only) Loaded.")
+print("Scrap Master Loaded (Strict Toggle + Sync).")
