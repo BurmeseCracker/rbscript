@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (STABLE TP) ]] --
+-- [[ trackerv4.lua - Fuel Master (SYNC FIXED) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -69,34 +69,36 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
             local targetCFrame = targetPart.CFrame
             local dist = (root.Position - targetCFrame.Position).Magnitude
 
-            -- 1. BEAMS (Stays until item is actually GONE)
             if dist <= MAX_VISUAL_DIST then
                 createV4Path(item, root)
             else
                 removeV4Path(item)
             end
 
-            -- 2. TP COLLECTION
             if dist <= COLLECT_DIST then
                 processed[item] = true
 
                 task.spawn(function()
-                    -- Teleport
+                    -- 1. TELEPORT & FREEZE
+                    root.Anchored = true
                     char:PivotTo(targetCFrame * CFrame.new(0, 3, 0))
                     
-                    task.wait(0.2) -- Longer wait for server sync
+                    -- 2. WAIT FOR SERVER SYNC
+                    task.wait(0.25) 
                     
-                    -- Pickup
+                    -- 3. ATTEMPT COLLECTION
                     PickUpRemote:FireServer(item)
                     task.wait(0.1)
                     
-                    -- Only remove beam and adjust if it actually worked
+                    -- 4. SUCCESS CHECK
                     if item.Parent ~= SEARCH_FOLDER then
                         AdjustRemote:FireServer(item)
                         removeV4Path(item) 
                     end
                     
-                    task.wait(2)
+                    -- 5. UNFREEZE & COOLDOWN
+                    root.Anchored = false
+                    task.wait(1.5)
                     processed[item] = nil
                 end)
             end
