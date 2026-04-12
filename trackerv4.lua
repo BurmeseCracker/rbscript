@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (MAGNET ONLY) ]] --
+-- [[ trackerv4.lua - Fuel Master (STRICT MAGNET ONLY) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -45,7 +45,7 @@ local function createV4Path(model, root)
     local attB = Instance.new("Attachment", targetPart)
     local beam = Instance.new("Beam", root)
     beam.Attachment0, beam.Attachment1 = attP, attB
-    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Pure Red
+    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Red
     beam.Width0, beam.Width1 = 0.6, 0.6
     beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2; beam.FaceCamera = true
     v4Beams[model] = {beam = beam, aP = attP, aB = attB}
@@ -78,7 +78,7 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
                 removeV4Path(item)
             end
 
-            -- 2. MAGNET LOGIC
+            -- 2. MAGNET LOGIC (NO PLAYER TELEPORT)
             if dist <= BRING_DIST then
                 local drag = item:FindFirstChild("ItemDrag")
                 local dragRemote = drag and drag:FindFirstChild("RequestNetworkOwnership")
@@ -88,11 +88,11 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
                     processed[item] = true
                     
                     task.spawn(function()
-                        -- Tell server we are moving this object
+                        -- Tell server we control this object now
                         dragRemote:FireServer(targetPart)
                         
                         local startTime = tick()
-                        -- Hold item at feet until collected
+                        -- Pull item to your feet while you stay still
                         while tick() - startTime < 1.2 and item and item.Parent == SEARCH_FOLDER do
                             item:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
                             
