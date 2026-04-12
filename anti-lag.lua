@@ -1,19 +1,33 @@
--- [[ ANTI-LAG INFINITE YIELD EDITION - DRAGGABLE & FIXED ]] --
+-- [[ ANTI-LAG INFINITE YIELD EDITION - OPTIMIZED ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local RS = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- အဟောင်းများကို ရှင်းထုတ်ခြင်း
+-- [[ TARGETED DELETION ]] --
+local function remove(path)
+    if path then path:Destroy() end
+end
+
+remove(RS:FindFirstChild("Assets") and RS.Assets:FindFirstChild("Cutscenes"))
+
+local vfx = RS:FindFirstChild("Modules") and RS.Modules:FindFirstChild("VFX")
+if vfx then
+    remove(vfx:FindFirstChild("Shake"))
+    remove(vfx:FindFirstChild("ScreenEffects"))
+end
+
+-- Cleanup old instances
 if _G.AntiLagConnection then _G.AntiLagConnection:Disconnect() end
 local oldGui = player.PlayerGui:FindFirstChild("AntiLagGui")
 if oldGui then oldGui:Destroy() end
 
--- [ DRAG LOGIC FUNCTION ]
+-- [ DRAG LOGIC ]
 local function MakeDraggable(UIElement)
-    local dragging, dragInput, dragStart, startPos
+    local dragging, dragStart, startPos
     UIElement.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true; dragStart = input.Position; startPos = UIElement.Position
@@ -30,56 +44,49 @@ local function MakeDraggable(UIElement)
     end)
 end
 
--- UI ဖန်တီးခြင်း (Lime Green Style)
+-- [ UI CREATION ]
 local function CreateFPSUI()
     local gui = Instance.new("ScreenGui", player.PlayerGui)
     gui.Name = "AntiLagGui"
+    gui.ResetOnSpawn = false
     
     local frame = Instance.new("Frame", gui)
     frame.Size = UDim2.new(0, 130, 0, 55)
     frame.Position = UDim2.new(0, 10, 0, 150)
-    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BackgroundColor3 = Color3.new(0, 0, 0)
     frame.BackgroundTransparency = 0.4
-    frame.Active = true -- Drag လုပ်ဖို့အတွက် လိုအပ်သည်
+    frame.Active = true
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
 
-    -- ရွှေ့လို့ရအောင် လုပ်ခြင်း
     MakeDraggable(frame)
 
-    local fpsLabel = Instance.new("TextLabel", frame)
-    fpsLabel.Size = UDim2.new(1, -10, 0.5, 0)
-    fpsLabel.Position = UDim2.new(0, 10, 0, 0)
-    fpsLabel.BackgroundTransparency = 1
-    fpsLabel.TextColor3 = Color3.fromRGB(0, 255, 0) -- Lime
-    fpsLabel.Font = Enum.Font.Code
-    fpsLabel.TextSize = 15
-    fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    local function createLabel(pos)
+        local lbl = Instance.new("TextLabel", frame)
+        lbl.Size = UDim2.new(1, -10, 0.5, 0)
+        lbl.Position = pos
+        lbl.BackgroundTransparency = 1
+        lbl.TextColor3 = Color3.new(0, 1, 0)
+        lbl.Font = Enum.Font.Code
+        lbl.TextSize = 15
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        return lbl
+    end
 
-    local pingLabel = Instance.new("TextLabel", frame)
-    pingLabel.Size = UDim2.new(1, -10, 0.5, 0)
-    pingLabel.Position = UDim2.new(0, 10, 0.5, 0)
-    pingLabel.BackgroundTransparency = 1
-    pingLabel.TextColor3 = Color3.fromRGB(0, 255, 0) -- Lime
-    pingLabel.Font = Enum.Font.Code
-    pingLabel.TextSize = 15
-    pingLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-    return gui, fpsLabel, pingLabel
+    return gui, createLabel(UDim2.new(0, 10, 0, 0)), createLabel(UDim2.new(0, 10, 0.5, 0))
 end
 
--- [[ OPTIMIZATION FUNCTION ]] --
+-- [[ OPTIMIZATION FUNCTION - RUNS ONCE TO PREVENT LAG ]] --
 local function optimizeGame()
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 9e9
-    Lighting.Brightness = 1
     
-    for _, v in pairs(Lighting:GetDescendants()) do
+    for _, v in ipairs(Lighting:GetChildren()) do
         if v:IsA("PostProcessEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("SunRaysEffect") then
             v.Enabled = false
         end
     end
 
-    for _, v in pairs(workspace:GetDescendants()) do
+    for _, v in ipairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") then
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
@@ -92,19 +99,20 @@ local function optimizeGame()
 end
 
 local lastTime = tick()
-local currentGui, fl, pl
+local fl, pl
 
--- Main Loop
+-- [[ MAIN LOOP ]] --
 _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
-    -- Menu ရဲ့ _G["anti-lag"] variable ကို စစ်ဆေးခြင်း
     if _G["anti-lag"] == true then
-        -- UI မရှိသေးရင် အသစ်ဆောက်မယ်
+        -- Only create UI and optimize once per toggle
         if not player.PlayerGui:FindFirstChild("AntiLagGui") then
-            currentGui, fl, pl = CreateFPSUI()
+            local gui
+            gui, fl, pl = CreateFPSUI()
             optimizeGame()
+            settings().Rendering.QualityLevel = 1
         end
         
-        -- Update Stats
+        -- Update Stats (Low overhead)
         local currentTime = tick()
         local fps = math.floor(1 / (currentTime - lastTime))
         lastTime = currentTime
@@ -113,18 +121,15 @@ _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
             fl.Text = "FPS: " .. fps
             pl.Text = "Ping: " .. math.floor(player:GetNetworkPing() * 1000) .. "ms"
         end
-
-        settings().Rendering.QualityLevel = 1
     else
-        -- _G["anti-lag"] က false ဖြစ်သွားရင် (Menu ကနေ ပိတ်လိုက်ရင်)
+        -- Clean up when toggled off
         local existingGui = player.PlayerGui:FindFirstChild("AntiLagGui")
         if existingGui then
-            existingGui:Destroy() -- UI ကို ဖျက်မယ်
+            existingGui:Destroy()
             Lighting.GlobalShadows = true
             settings().Rendering.QualityLevel = 0
-            print("Anti-Lag Disabled & UI Removed.")
         end
     end
 end)
 
-print("Anti-Lag with Draggable FPS Loaded!")
+print("Anti-Lag Optimized & Loaded!")
