@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (INSTANT SYNC) ]] --
+-- [[ trackerv4.lua - Fuel Master (RANGE SYNC + BEAMS) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -16,12 +16,14 @@ local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpIte
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 150 -- Set back to 150 so you can actually see the beams
+local MAX_VISUAL_DIST = 150 -- Distance to see red beams
+local COLLECT_DIST = 35     -- ONLY collect if within this range
 local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
 
 local v4Beams = {}
 local processed = {}
 
+-- [[ BEAM LOGIC ]] --
 local function removeV4Path(model)
     local data = v4Beams[model]
     if data then
@@ -36,6 +38,7 @@ end
 
 local function createV4Path(model, root)
     if v4Beams[model] then return end
+    -- Targets Union first as is common for fuel models
     local targetPart = model:FindFirstChild("Union") or model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
     if not targetPart then return end
 
@@ -43,12 +46,13 @@ local function createV4Path(model, root)
     local attB = Instance.new("Attachment", targetPart)
     local beam = Instance.new("Beam", root)
     beam.Attachment0, beam.Attachment1 = attP, attB
-    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) 
+    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Red
     beam.Width0, beam.Width1 = 0.5, 0.5
     beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2; beam.FaceCamera = true
     v4Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
+-- [[ MAIN LOOP ]] --
 if _G.FuelMasterLoop then _G.FuelMasterLoop:Disconnect() end
 
 _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
@@ -75,26 +79,28 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
                 removeV4Path(item)
             end
 
-            -- 2. AUTOMATIC COLLECTION (NO TP)
-            processed[item] = true
+            -- 2. AUTOMATIC RANGE COLLECTION
+            if dist <= COLLECT_DIST then
+                processed[item] = true
 
-            task.spawn(function()
-                task.wait(0.1) -- Required delay
-                
-                -- We fire BOTH remotes at almost the same time
-                -- This tricks the server into processing the backpack slot 
-                -- before the item is fully "gone" from the world.
-                PickUpRemote:FireServer(item)
-                AdjustRemote:FireServer(item) 
-                
-                -- Visual cleanup
-                task.wait(0.5)
-                removeV4Path(item)
-                
-                -- Cooldown
-                task.wait(3)
-                processed[item] = nil
-            end)
+                task.spawn(function()
+                    task.wait(0.1) -- Required delay for server stability
+                    
+                    -- Instant Sync fire to ensure backpack registration
+                    PickUpRemote:FireServer(item)
+                    AdjustRemote:FireServer(item) 
+                    
+                    -- Cleanup visuals once collected
+                    task.wait(0.3)
+                    removeV4Path(item)
+                    
+                    -- Cooldown to prevent spam
+                    task.wait(2.5)
+                    processed[item] = nil
+                end)
+            end
         end
     end
 end)
+
+print("Fuel Master (Range: " .. COLLECT_DIST .. ") Loaded.")
