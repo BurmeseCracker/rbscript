@@ -8,8 +8,9 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
+-- CONFIG
 local MAX_DISTANCE = 200 
-local COLLECT_DIST = 40    -- Distance to fire the pickup remote
+local COLLECT_DIST = 35    -- Matches your v2 distance
 local TARGET_NAMES = { ["Fuel"] = true, ["Refined Fuel"] = true }
 
 if _G.TrackerV4Loop then _G.TrackerV4Loop:Disconnect() end
@@ -17,7 +18,7 @@ _G.v4Beams = _G.v4Beams or {}
 local processed = {}
 
 local function clearV4()
-    for model, data in pairs(_G.v4Beams) do
+    for item, data in pairs(_G.v4Beams) do
         pcall(function()
             if data.beam then data.beam:Destroy() end
             if data.aP then data.aP:Destroy() end
@@ -34,53 +35,54 @@ _G.TrackerV4Loop = RunService.Heartbeat:Connect(function()
         if not root then return end
 
         for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-            if item:IsA("Model") and TARGET_NAMES[item.Name] then
-                local itemPos = item:GetPivot().Position
+            -- Detection for Unions/Parts by name
+            if TARGET_NAMES[item.Name] and (item:IsA("BasePart") or item:IsA("UnionOperation")) then
+                local itemPos = item.Position
                 local dist = (root.Position - itemPos).Magnitude
                 
                 -- [[ 1. BEAM LOGIC ]] --
                 if dist <= MAX_DISTANCE and not processed[item] then
                     if not _G.v4Beams[item] then
-                        -- Updated to find Union or BasePart
-                        local targetPart = item.PrimaryPart 
-                            or item:FindFirstChildWhichIsA("UnionOperation") 
-                            or item:FindFirstChildWhichIsA("BasePart")
-
-                        if targetPart then
-                            local attP = Instance.new("Attachment", root)
-                            local attB = Instance.new("Attachment", targetPart)
-                            local beam = Instance.new("Beam", root)
-                            beam.Attachment0, beam.Attachment1 = attP, attB
-                            beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Red
-                            beam.Width0, beam.Width1, beam.Texture, beam.TextureSpeed, beam.FaceCamera = 0.35, 0.35, "rbxassetid://44611181", 2.5, true
-                            _G.v4Beams[item] = {beam = beam, aP = attP, aB = attB}
-                        end
+                        local attP = Instance.new("Attachment", root)
+                        local attB = Instance.new("Attachment", item)
+                        local beam = Instance.new("Beam", root)
+                        
+                        beam.Attachment0, beam.Attachment1 = attP, attB
+                        beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Red
+                        beam.Width0, beam.Width1 = 0.35, 0.35
+                        beam.Texture = "rbxassetid://44611181"
+                        beam.TextureSpeed = 2.5
+                        beam.FaceCamera = true
+                        
+                        _G.v4Beams[item] = {beam = beam, aP = attP, aB = attB}
                     end
                 else
                     if _G.v4Beams[item] then
                         pcall(function()
-                            _G.v4Beams[item].beam:Destroy(); _G.v4Beams[item].aP:Destroy(); _G.v4Beams[item].aB:Destroy()
+                            _G.v4Beams[item].beam:Destroy()
+                            _G.v4Beams[item].aP:Destroy()
+                            _G.v4Beams[item].aB:Destroy()
                         end)
                         _G.v4Beams[item] = nil
                     end
                 end
 
-                -- [[ 2. AUTO-COLLECT (REMOTE ONLY) ]] --
+                -- [[ 2. COLLECTION LOGIC (v2 Style) ]] --
                 if dist <= COLLECT_DIST and not processed[item] then
                     processed[item] = true
+                    removePath(item) -- Cleanup beam immediately on collect
                     
                     task.spawn(function()
-                        -- Fire pickup remote immediately
+                        -- Direct Remote Fire
                         PickUpRemote:FireServer(item)
-                        task.wait(0.1)
                         
-                        -- Finalize backpack adjustment
+                        task.wait(0.2)
+                        
                         if item and item.Parent then 
                             AdjustRemote:FireServer(item) 
                         end
                         
-                        -- Brief delay before this specific item can be tracked again (if it failed)
-                        task.wait(2)
+                        task.wait(2) -- Cooldown to prevent re-triggering
                         processed[item] = nil
                     end)
                 end
