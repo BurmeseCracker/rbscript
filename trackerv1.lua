@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (BEAMS + TP + OWNERSHIP + COLLECTION) ]] --
+-- [[ trackerv1.lua - Battery Master (BEAMS + MAGNET COLLECT) ]] --
 local scriptID = "trackerv1" 
 
 -- Wait for Menu Toggle
@@ -19,7 +19,7 @@ local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack"
 
 -- CONFIG
 local MAX_VISUAL_DIST = 150 -- Show beams up to 150 studs
-local TRIGGER_DIST = 40     -- Teleport you at 40 studs
+local TRIGGER_DIST = 40     -- Distance to pull item to you
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
@@ -73,16 +73,15 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             local pos = item:GetPivot().Position
             local dist = (root.Position - pos).Magnitude
 
-            -- 1. BEAM DRAWING (Visual)
+            -- 1. BEAM DRAWING (Visual tracking)
             if dist <= MAX_VISUAL_DIST and not processed[item] then
                 createV1Path(item, root)
             else
                 removeV1Path(item)
             end
 
-            -- 2. TELEPORT & COLLECT LOGIC
+            -- 2. MAGNET COLLECT LOGIC (NO TELEPORT)
             if dist <= TRIGGER_DIST and not processed[item] and not isCollecting then
-                -- Locate specific battery parts for ownership
                 local mainPart = item:FindFirstChild("MainPart") or item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
                 local itemDrag = item:FindFirstChild("ItemDrag")
                 local ownershipRemote = itemDrag and itemDrag:FindFirstChild("RequestNetworkOwnership")
@@ -90,44 +89,40 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
                 if mainPart and ownershipRemote then
                     isCollecting = true
                     processed[item] = true
-                    removeV1Path(item) -- Remove beam when TP starts
-
+                    
                     task.spawn(function()
-                        -- STEP A: Teleport Character
-                        root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
-                        
-                        -- STEP B: Request Physics Ownership (The Snap-Back Fix)
+                        -- STEP A: Claim Physics Ownership (Allows the item to move to you smoothly)
                         ownershipRemote:FireServer(mainPart)
-                        task.wait(0.1) -- Delay for server sync
+                        task.wait(0.05) 
                         
-                        -- STEP C: Bring & Pickup Loop
+                        -- STEP B: Pull Item & Pickup Loop
                         local startTime = tick()
                         while tick() - startTime < 1.0 and item and item.Parent do
-                            -- Anchor item to your feet
+                            -- Magnetize item to your feet instead of moving YOU
                             item:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
                             
-                            -- Spam Pickup Remote
+                            -- Fire Pickup Remote
                             if tick() - startTime > 0.05 then
                                 PickUpRemote:FireServer(item)
                             end
                             RunService.Heartbeat:Wait()
                         end
                         
-                        -- STEP D: Finalize Backpack
+                        -- STEP C: Finalize Backpack
                         if item and item.Parent then AdjustRemote:FireServer(item) end
                         
                         task.wait(0.1)
                         isCollecting = false
                         
-                        -- Delay before this item can be targeted again
+                        -- Cooldown
                         task.wait(2)
                         processed[item] = nil
                     end)
-                    break -- Handle one battery at a time
+                    break 
                 end
             end
         end
     end
 end)
 
-print("Battery Master v8 Logic Loaded Successfully.")
+print("Battery Magnet Master Loaded.")
