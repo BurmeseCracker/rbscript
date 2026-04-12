@@ -102,4 +102,4 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Battery Range Collect Loaded.") like this 
+print("Battery Range Collect Loaded.")
