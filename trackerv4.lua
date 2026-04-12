@@ -88,11 +88,11 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
 
                 task.spawn(function()
                     -- Added delay before firing as requested
-                    task.wait(0.1)
+                    task.wait(1)
                     
                     -- Fire collection remotes
                     PickUpRemote:FireServer(item)
-                    task.wait(0.1)
+                    task.wait(1)
                     
                     if item and item.Parent then
                         AdjustRemote:FireServer(item)
