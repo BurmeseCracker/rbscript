@@ -157,7 +157,7 @@ AddActionButton("Teleport To Base", "TeleportToBase.lua")
 AddSection("Items MENU")
 AddToggle("AutoCollect Battery", "trackerv1.lua")
 AddToggle("AutoCollect Scraps", "trackerv2.lua")
-AddToggle("AutoCollect Fuel", "trackerv4.lua")
+AddToggle("Locate Fuel", "trackerv4.lua")
 
 AddToggle("Locate Crate", "trackerv5.lua")
 
