@@ -155,10 +155,10 @@ AddToggle("Jump Height", "jump.lua")
 AddActionButton("Teleport To Base", "TeleportToBase.lua")
 
 AddSection("Items MENU")
-AddToggle("Locate Battery", "trackerv1.lua")
-AddToggle("AutoCollect Battery", "AutoCollectBattery.lua")
-AddToggle("Locate Scraps", "trackerv2.lua")
-AddToggle("AutoCollect Scrap", "AutoCollectScrap.lua")
+AddToggle("AutoCollect Battery", "trackerv1.lua")
+
+AddToggle("AutoCollect Scraps", "trackerv2.lua")
+
 AddToggle("Locate Foods", "trackerv3.lua")
 AddToggle("Locate Fuel", "trackerv4.lua")
 AddToggle("AutoCollect Fuel", "AutoCollectFuel.lua")
@@ -175,8 +175,7 @@ AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
     _G["speed"] = false
     _G["noclip"] = false
     _G["jump"] = false
-    _G["AutoCollectBattery"] = false
-    _G["AutoCollectScrap"] = false
+  
     _G["AutoCollectFuel"] = false
     _G["AutoEvasion"] = false
     _G["trackerv1"] = false
