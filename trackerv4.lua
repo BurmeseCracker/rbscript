@@ -1,7 +1,6 @@
--- [[ trackerv4.lua - Fuel Master (GLOBAL RANGE - NO TP) ]] --
+-- [[ trackerv4.lua - Fuel Master (INSTANT SYNC) ]] --
 local scriptID = "trackerv4" 
 
--- Wait for Menu Toggle
 if _G[scriptID] ~= true then
     repeat task.wait(0.5) until _G[scriptID] == true
 end
@@ -12,19 +11,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
--- Remotes
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 20
+local MAX_VISUAL_DIST = 150 -- Set back to 150 so you can actually see the beams
 local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
 
 local v4Beams = {}
 local processed = {}
 
--- [[ BEAM LOGIC ]] --
 local function removeV4Path(model)
     local data = v4Beams[model]
     if data then
@@ -52,7 +49,6 @@ local function createV4Path(model, root)
     v4Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
--- [[ MAIN LOOP ]] --
 if _G.FuelMasterLoop then _G.FuelMasterLoop:Disconnect() end
 
 _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
@@ -75,37 +71,30 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
             -- 1. SHOW BEAMS
             if dist <= MAX_VISUAL_DIST then
                 createV4Path(item, root)
+            else
+                removeV4Path(item)
             end
 
-            -- 2. AUTOMATIC COLLECTION (NO DISTANCE / NO TP)
+            -- 2. AUTOMATIC COLLECTION (NO TP)
             processed[item] = true
 
             task.spawn(function()
-                -- Delay before fire as requested
-                task.wait(0.1)
+                task.wait(0.1) -- Required delay
                 
-                -- Fire collection remotes
+                -- We fire BOTH remotes at almost the same time
+                -- This tricks the server into processing the backpack slot 
+                -- before the item is fully "gone" from the world.
                 PickUpRemote:FireServer(item)
+                AdjustRemote:FireServer(item) 
                 
-                -- Wait for server to process
-                local timeout = 0
-                while item.Parent == SEARCH_FOLDER and timeout < 20 do
-                    task.wait(0.05)
-                    timeout = timeout + 1
-                end
+                -- Visual cleanup
+                task.wait(0.5)
+                removeV4Path(item)
                 
-                -- Finalize in backpack if server removed it from workspace
-                if item.Parent ~= SEARCH_FOLDER then
-                    AdjustRemote:FireServer(item)
-                    removeV4Path(item)
-                end
-                
-                -- 3 second cooldown per item slot
+                -- Cooldown
                 task.wait(3)
                 processed[item] = nil
             end)
         end
     end
 end)
-
-print("Fuel Global Remote Collect Loaded (No TP).")
