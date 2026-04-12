@@ -1,4 +1,4 @@
--- [[ trackerv3.lua - Fuel Master (SPEED FIX) ]] --
+-- [[ trackerv4.lua - Fuel Master (MAGNET ONLY) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -15,63 +15,101 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
-local TRIGGER_DIST = 40 
+-- [[ CONFIG ]] --
+local MAX_VISUAL_DIST = 150
+local BRING_DIST = 40      -- Collection Range
 local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
 
+local v4Beams = {}
 local processed = {}
 local isCollecting = false
+
+local function removeV4Path(model)
+    local data = v4Beams[model]
+    if data then
+        pcall(function()
+            if data.beam then data.beam:Destroy() end
+            if data.aP then data.aP:Destroy() end
+            if data.aB then data.aB:Destroy() end
+        end)
+        v4Beams[model] = nil
+    end
+end
+
+local function createV4Path(model, root)
+    if v4Beams[model] then return end
+    local targetPart = model:FindFirstChild("Union") or model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
+    if not targetPart then return end
+
+    local attP = Instance.new("Attachment", root)
+    local attB = Instance.new("Attachment", targetPart)
+    local beam = Instance.new("Beam", root)
+    beam.Attachment0, beam.Attachment1 = attP, attB
+    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Pure Red
+    beam.Width0, beam.Width1 = 0.6, 0.6
+    beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2; beam.FaceCamera = true
+    v4Beams[model] = {beam = beam, aP = attP, aB = attB}
+end
 
 if _G.FuelMasterLoop then _G.FuelMasterLoop:Disconnect() end
 
 _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
-    if _G[scriptID] ~= true or isCollecting then return end
+    if _G[scriptID] ~= true then 
+        for model, _ in pairs(v4Beams) do removeV4Path(model) end
+        return 
+    end
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    if not root or isCollecting then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-        if TARGET_NAMES[item.Name] and not processed[item] and item:FindFirstChild("Union") then
-            local targetPart = item.Union
+        if TARGET_NAMES[item.Name] and not processed[item] then
+            local targetPart = item:FindFirstChild("Union") or item:FindFirstChildWhichIsA("BasePart")
+            if not targetPart then continue end
+
             local pos = targetPart.Position
             local dist = (root.Position - pos).Magnitude
 
-            if dist <= TRIGGER_DIST then
-                isCollecting = true
-                processed[item] = true
+            -- 1. VISUAL RED BEAMS
+            if dist <= MAX_VISUAL_DIST then
+                createV4Path(item, root)
+            else
+                removeV4Path(item)
+            end
+
+            -- 2. MAGNET LOGIC
+            if dist <= BRING_DIST then
+                local drag = item:FindFirstChild("ItemDrag")
+                local dragRemote = drag and drag:FindFirstChild("RequestNetworkOwnership")
                 
-                task.spawn(function()
-                    -- 1. Immediate TP
-                    root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                if dragRemote then
+                    isCollecting = true
+                    processed[item] = true
                     
-                    -- 2. Claim Ownership
-                    local drag = item:FindFirstChild("ItemDrag")
-                    if drag and drag:FindFirstChild("RequestNetworkOwnership") then
-                        drag.RequestNetworkOwnership:FireServer(targetPart)
-                    end
-                    
-                    -- 3. Short buffer for Server Sync
-                    task.wait(0.15) 
-                    
-                    -- 4. Multi-Fire Collection (Ensures it hits)
-                    local tries = 0
-                    while item and item.Parent == SEARCH_FOLDER and tries < 10 do
-                        item:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
-                        PickUpRemote:FireServer(item)
-                        RunService.Heartbeat:Wait()
-                        tries = tries + 1
-                    end
-                    
-                    -- 5. Finalize Inventory
-                    AdjustRemote:FireServer(item)
-                    
-                    task.wait(0.1)
-                    isCollecting = false
-                    
-                    -- Cleanup: Remove from processed if it's actually gone
-                    task.delay(2, function() processed[item] = nil end)
-                end)
-                break 
+                    task.spawn(function()
+                        -- Tell server we are moving this object
+                        dragRemote:FireServer(targetPart)
+                        
+                        local startTime = tick()
+                        -- Hold item at feet until collected
+                        while tick() - startTime < 1.2 and item and item.Parent == SEARCH_FOLDER do
+                            item:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
+                            
+                            if tick() - startTime > 0.05 then
+                                PickUpRemote:FireServer(item)
+                            end
+                            RunService.Heartbeat:Wait()
+                        end
+                        
+                        if item and item.Parent then AdjustRemote:FireServer(item) end
+                        
+                        task.wait(0.1)
+                        isCollecting = false
+                        task.delay(2.5, function() processed[item] = nil end)
+                    end)
+                    break 
+                end
             end
         end
     end
