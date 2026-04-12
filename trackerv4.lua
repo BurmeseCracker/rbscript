@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (JUST COLLECT) ]] --
+-- [[ trackerv4.lua - Fuel Master (BEAMS + COLLECTION FIX) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -15,14 +15,15 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
--- [[ CONFIG ]] --
-local MAX_VISUAL_DIST = 100
-local COLLECTION_DIST = 40 
+-- CONFIG
+local MAX_VISUAL_DIST = 150
+local COLLECT_DIST = 40 
 local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
 
 local v4Beams = {}
 local processed = {}
 
+-- [[ BEAM LOGIC ]] --
 local function removeV4Path(model)
     local data = v4Beams[model]
     if data then
@@ -37,7 +38,6 @@ end
 
 local function createV4Path(model, root)
     if v4Beams[model] then return end
-    -- Targets Union or BasePart
     local targetPart = model:FindFirstChild("Union") or model:FindFirstChildWhichIsA("BasePart")
     if not targetPart then return end
 
@@ -45,12 +45,13 @@ local function createV4Path(model, root)
     local attB = Instance.new("Attachment", targetPart)
     local beam = Instance.new("Beam", root)
     beam.Attachment0, beam.Attachment1 = attP, attB
-    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) 
+    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Red
     beam.Width0, beam.Width1 = 0.5, 0.5
     beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2; beam.FaceCamera = true
     v4Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
+-- [[ MAIN LOOP ]] --
 if _G.FuelMasterLoop then _G.FuelMasterLoop:Disconnect() end
 
 _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
@@ -70,27 +71,32 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
 
             local dist = (root.Position - targetPart.Position).Magnitude
 
-            -- 1. Beams
+            -- 1. SHOW BEAMS (Back as requested)
             if dist <= MAX_VISUAL_DIST then
                 createV4Path(item, root)
             else
                 removeV4Path(item)
             end
 
-            -- 2. Just Collect
-            if dist <= COLLECTION_DIST then
+            -- 2. COLLECTION LOGIC
+            if dist <= COLLECT_DIST then
                 processed[item] = true
                 
                 task.spawn(function()
-                    task.wait(0.1) -- The delay you wanted
+                    task.wait(0.1) 
                     
                     if item and item.Parent then
-                        PickUpRemote:FireServer(item)
+                        -- We fire the pickup multiple times to "force" it through lag
+                        for i = 1, 3 do
+                            PickUpRemote:FireServer(item)
+                            RunService.Heartbeat:Wait()
+                        end
+                        
                         task.wait(0.1)
                         AdjustRemote:FireServer(item)
                     end
                     
-                    task.wait(2) -- Cooldown so it doesn't spam
+                    task.wait(2)
                     processed[item] = nil
                 end)
             end
