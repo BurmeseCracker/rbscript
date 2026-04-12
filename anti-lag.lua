@@ -5,12 +5,15 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local RS = game:GetService("ReplicatedStorage")
+local fog = game:GetService("Fog")
 local player = Players.LocalPlayer
 
 -- [[ TARGETED DELETION ]] --
 local function remove(path)
     if path then path:Destroy() end
 end
+
+remove(fog)
 
 remove(RS:FindFirstChild("Assets") and RS.Assets:FindFirstChild("Cutscenes"))
 
