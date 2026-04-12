@@ -1,4 +1,4 @@
--- [[ ANTI-LAG INFINITE YIELD EDITION - OPTIMIZED ]] --
+-- [[ ANTI-LAG INFINITE YIELD EDITION - FORCE DELETE ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -7,25 +7,37 @@ local UserInputService = game:GetService("UserInputService")
 local RS = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- [[ TARGETED DELETION ]] --
-local function remove(path)
-    if path then 
-        pcall(function() path:Destroy() end) 
+-- [[ AGGRESSIVE DELETION ]] --
+-- This function will keep looking for the folders until it finds and deletes them
+local function forceDelete(parent, name)
+    task.spawn(function()
+        while true do
+            local target = parent:FindFirstChild(name)
+            if target then
+                pcall(function() target:Destroy() end)
+                print(name .. " has been force deleted.")
+                break
+            end
+            task.wait(1) -- Check every second until it exists to delete it
+        end
+    end)
+end
+
+-- Force delete the specific targets
+forceDelete(workspace, "Fog")
+forceDelete(RS:WaitForChild("Assets"), "Cutscenes")
+
+-- Handle Modules > VFX folder
+task.spawn(function()
+    local modules = RS:WaitForChild("Modules")
+    local vfx = modules:WaitForChild("VFX")
+    if vfx then
+        local shake = vfx:FindFirstChild("Shake")
+        local effects = vfx:FindFirstChild("ScreenEffects")
+        if shake then shake:Destroy() end
+        if effects then effects:Destroy() end
     end
-end
-
--- Delete workspace.Fog (As requested)
-remove(workspace:FindFirstChild("Fog"))
-
--- Delete Cutscenes
-remove(RS:FindFirstChild("Assets") and RS.Assets:FindFirstChild("Cutscenes"))
-
--- Delete Shake & ScreenEffects inside Modules > VFX
-local vfx = RS:FindFirstChild("Modules") and RS.Modules:FindFirstChild("VFX")
-if vfx then
-    remove(vfx:FindFirstChild("Shake"))
-    remove(vfx:FindFirstChild("ScreenEffects"))
-end
+end)
 
 -- Cleanup old instances
 if _G.AntiLagConnection then _G.AntiLagConnection:Disconnect() end
@@ -130,7 +142,7 @@ _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
         local existingGui = player.PlayerGui:FindFirstChild("AntiLagGui")
         if existingGui then
             existingGui:Destroy()
-             Lighting.GlobalShadows = true
+            Lighting.GlobalShadows = true
             settings().Rendering.QualityLevel = 0
         end
     end
