@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (BEAMS + TP + OWNERSHIP) ]] --
+-- [[ trackerv1.lua - Battery Master (FIXED BEAMS + TP) ]] --
 local scriptID = "trackerv1" 
 
 if _G[scriptID] ~= true then
@@ -15,15 +15,15 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 100 -- Beams show up at this distance
-local TRIGGER_DIST = 40     -- Teleport starts at this distance
+local MAX_VISUAL_DIST = 100 -- Distance to see beams
+local TRIGGER_DIST = 40     -- Distance to teleport
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
 local processed = {}
 local isCollecting = false
 
--- [[ BEAM FUNCTIONS ]] --
+-- [[ BEAM LOGIC ]] --
 local function removeV1Path(model)
     local data = v1Beams[model]
     if data then
@@ -68,32 +68,33 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             local pos = item:GetPivot().Position
             local dist = (root.Position - pos).Magnitude
 
-            -- 1. SHOW BEAMS
-            if dist <= MAX_VISUAL_DIST then
+            -- 1. SHOW BEAMS (Always run this if not collected)
+            if dist <= MAX_VISUAL_DIST and not processed[item] then
                 createV1Path(item, root)
             else
                 removeV1Path(item)
             end
 
-            -- 2. TRIGGER TP & COLLECT
+            -- 2. TRIGGER TP & OWNERSHIP & COLLECT
             if dist <= TRIGGER_DIST and not processed[item] and not isCollecting then
-                local mainPart = item:FindFirstChild("MainPart") or item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+                local mainPart = item:FindFirstChild("MainPart") or item.PrimaryPart
                 local itemDrag = item:FindFirstChild("ItemDrag")
                 local ownershipRemote = itemDrag and itemDrag:FindFirstChild("RequestNetworkOwnership")
 
                 if mainPart and ownershipRemote then
                     isCollecting = true
                     processed[item] = true
+                    removeV1Path(item) -- Clean beam before TP
                     
                     task.spawn(function()
-                        -- TP Character
+                        -- TP
                         root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
                         
-                        -- Ownership
+                        -- Claim Physics
                         ownershipRemote:FireServer(mainPart)
                         task.wait(0.1)
                         
-                        -- Bring Loop
+                        -- Bring & Collect
                         local startTime = tick()
                         while tick() - startTime < 1.0 and item and item.Parent do
                             item:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
@@ -106,7 +107,7 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
                         if item and item.Parent then AdjustRemote:FireServer(item) end
                         task.wait(0.1)
                         isCollecting = false
-                        task.delay(2, function() processed[item] = nil end)
+                        task.delay(3, function() processed[item] = nil end)
                     end)
                     break
                 end
