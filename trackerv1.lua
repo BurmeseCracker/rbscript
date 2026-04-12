@@ -20,7 +20,7 @@ local PickUpRemote = Remotes and Remotes:FindFirstChild("Interaction"):FindFirst
 local AdjustRemote = Remotes and Remotes:FindFirstChild("Tools"):FindFirstChild("AdjustBackpack")
 
 -- Config
-local TRIGGER_DIST = 65    -- You must be within 40 studs to TP
+local TRIGGER_DIST = 40    -- You must be within 40 studs to TP
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
