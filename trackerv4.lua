@@ -10,20 +10,30 @@ local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack"
 
 -- CONFIG
 local MAX_DISTANCE = 200 
-local COLLECT_DIST = 35    -- Matches your v2 distance
+local COLLECT_DIST = 35    
 local TARGET_NAMES = { ["Fuel"] = true, ["Refined Fuel"] = true }
 
 if _G.TrackerV4Loop then _G.TrackerV4Loop:Disconnect() end
 _G.v4Beams = _G.v4Beams or {}
 local processed = {}
 
-local function clearV4()
-    for item, data in pairs(_G.v4Beams) do
+-- Function to remove a single beam
+local function removeSingleV4(item)
+    local data = _G.v4Beams[item]
+    if data then
         pcall(function()
             if data.beam then data.beam:Destroy() end
             if data.aP then data.aP:Destroy() end
             if data.aB then data.aB:Destroy() end
         end)
+        _G.v4Beams[item] = nil
+    end
+end
+
+-- Function to clear all beams
+local function clearAllV4()
+    for item, _ in pairs(_G.v4Beams) do
+        removeSingleV4(item)
     end
     _G.v4Beams = {}
 end
@@ -35,7 +45,7 @@ _G.TrackerV4Loop = RunService.Heartbeat:Connect(function()
         if not root then return end
 
         for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-            -- Detection for Unions/Parts by name
+            -- Identify strictly by name and physical type (Union/Part)
             if TARGET_NAMES[item.Name] and (item:IsA("BasePart") or item:IsA("UnionOperation")) then
                 local itemPos = item.Position
                 local dist = (root.Position - itemPos).Magnitude
@@ -57,23 +67,16 @@ _G.TrackerV4Loop = RunService.Heartbeat:Connect(function()
                         _G.v4Beams[item] = {beam = beam, aP = attP, aB = attB}
                     end
                 else
-                    if _G.v4Beams[item] then
-                        pcall(function()
-                            _G.v4Beams[item].beam:Destroy()
-                            _G.v4Beams[item].aP:Destroy()
-                            _G.v4Beams[item].aB:Destroy()
-                        end)
-                        _G.v4Beams[item] = nil
-                    end
+                    removeSingleV4(item)
                 end
 
-                -- [[ 2. COLLECTION LOGIC (v2 Style) ]] --
+                -- [[ 2. COLLECTION LOGIC ]] --
                 if dist <= COLLECT_DIST and not processed[item] then
                     processed[item] = true
-                    removePath(item) -- Cleanup beam immediately on collect
+                    removeSingleV4(item) -- Beam gone on collect
                     
                     task.spawn(function()
-                        -- Direct Remote Fire
+                        -- Direct Remote Fire on the object
                         PickUpRemote:FireServer(item)
                         
                         task.wait(0.2)
@@ -82,15 +85,17 @@ _G.TrackerV4Loop = RunService.Heartbeat:Connect(function()
                             AdjustRemote:FireServer(item) 
                         end
                         
-                        task.wait(2) -- Cooldown to prevent re-triggering
+                        task.wait(2) -- Cooldown
                         processed[item] = nil
                     end)
                 end
             end
         end
     else
-        clearV4()
-        _G.TrackerV4Loop:Disconnect()
-        _G.TrackerV4Loop = nil
+        clearAllV4()
+        if _G.TrackerV4Loop then
+            _G.TrackerV4Loop:Disconnect()
+            _G.TrackerV4Loop = nil
+        end
     end
 end)
