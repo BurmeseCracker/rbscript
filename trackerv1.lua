@@ -12,8 +12,8 @@ local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Too
 
 -- Config
 local MAX_DISTANCE = 200     -- Beam distance
-local BRING_DIST = 60        -- Distance to start pulling item to you
-local COLLECT_DIST = 10      -- Distance to actually fire the PickUp Remote
+local BRING_DIST = 200        -- Distance to start pulling item to you
+local COLLECT_DIST = 200      -- Distance to actually fire the PickUp Remote
 local TARGET_NAMES = {
     ["Battery"] = true, 
     ["Battery Pack"] = true
