@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (TP COLLECT) ]] --
+-- [[ trackerv4.lua - Fuel Master (STRICT TP COLLECT) ]] --
 local scriptID = "trackerv4" 
 
 -- Wait for Menu Toggle
@@ -19,7 +19,7 @@ local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack"
 
 -- CONFIG
 local MAX_VISUAL_DIST = 150 
-local COLLECT_DIST = 40     -- If within 40 studs, it will TP and grab
+local COLLECT_DIST = 40     
 local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
 
 local v4Beams = {}
@@ -40,14 +40,15 @@ end
 
 local function createV4Path(model, root)
     if v4Beams[model] then return end
-    local targetPart = model:FindFirstChild("Union") or model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
+    -- Check for Union or any BasePart
+    local targetPart = model:FindFirstChild("Union") or model:FindFirstChildWhichIsA("BasePart") or model.PrimaryPart
     if not targetPart then return end
 
     local attP = Instance.new("Attachment", root)
     local attB = Instance.new("Attachment", targetPart)
     local beam = Instance.new("Beam", root)
     beam.Attachment0, beam.Attachment1 = attP, attB
-    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Red
+    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) 
     beam.Width0, beam.Width1 = 0.5, 0.5
     beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2; beam.FaceCamera = true
     v4Beams[model] = {beam = beam, aP = attP, aB = attB}
@@ -68,12 +69,12 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
-            -- Find the Union/Part to TP to
-            local targetPart = item:FindFirstChild("Union") or item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+            -- Get the target part (usually Union for Fuel)
+            local targetPart = item:FindFirstChild("Union") or item:FindFirstChildWhichIsA("BasePart")
             if not targetPart then continue end
             
-            local targetPos = targetPart.Position
-            local dist = (root.Position - targetPos).Magnitude
+            local targetCFrame = targetPart.CFrame
+            local dist = (root.Position - targetCFrame.Position).Magnitude
 
             -- 1. SHOW BEAMS
             if dist <= MAX_VISUAL_DIST then
@@ -88,12 +89,13 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
                 removeV4Path(item)
 
                 task.spawn(function()
-                    -- Teleport ME to THEM
-                    root.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
+                    -- Move the character to the item
+                    char:PivotTo(targetCFrame * CFrame.new(0, 3, 0))
                     
-                    task.wait(0.1) -- Small delay to ensure server sees you there
+                    -- Crucial delay for the server to update your position
+                    task.wait(0.15) 
                     
-                    -- Fire collection remotes
+                    -- Collection Remotes
                     PickUpRemote:FireServer(item)
                     task.wait(0.1)
                     
@@ -101,7 +103,6 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
                         AdjustRemote:FireServer(item)
                     end
                     
-                    -- Cooldown
                     task.wait(2)
                     processed[item] = nil
                 end)
@@ -109,5 +110,3 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
 end)
-
-print("Fuel TP Collect Loaded.")
