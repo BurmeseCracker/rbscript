@@ -5,18 +5,22 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local RS = game:GetService("ReplicatedStorage")
-local fog = game:GetService("Fog")
 local player = Players.LocalPlayer
 
 -- [[ TARGETED DELETION ]] --
 local function remove(path)
-    if path then path:Destroy() end
+    if path then 
+        pcall(function() path:Destroy() end) 
+    end
 end
 
-remove(fog)
+-- Delete workspace.Fog (As requested)
+remove(workspace:FindFirstChild("Fog"))
 
+-- Delete Cutscenes
 remove(RS:FindFirstChild("Assets") and RS.Assets:FindFirstChild("Cutscenes"))
 
+-- Delete Shake & ScreenEffects inside Modules > VFX
 local vfx = RS:FindFirstChild("Modules") and RS.Modules:FindFirstChild("VFX")
 if vfx then
     remove(vfx:FindFirstChild("Shake"))
@@ -78,7 +82,7 @@ local function CreateFPSUI()
     return gui, createLabel(UDim2.new(0, 10, 0, 0)), createLabel(UDim2.new(0, 10, 0.5, 0))
 end
 
--- [[ OPTIMIZATION FUNCTION - RUNS ONCE TO PREVENT LAG ]] --
+-- [[ OPTIMIZATION FUNCTION ]] --
 local function optimizeGame()
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 9e9
@@ -107,7 +111,6 @@ local fl, pl
 -- [[ MAIN LOOP ]] --
 _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
     if _G["anti-lag"] == true then
-        -- Only create UI and optimize once per toggle
         if not player.PlayerGui:FindFirstChild("AntiLagGui") then
             local gui
             gui, fl, pl = CreateFPSUI()
@@ -115,7 +118,6 @@ _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
             settings().Rendering.QualityLevel = 1
         end
         
-        -- Update Stats (Low overhead)
         local currentTime = tick()
         local fps = math.floor(1 / (currentTime - lastTime))
         lastTime = currentTime
@@ -125,11 +127,10 @@ _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
             pl.Text = "Ping: " .. math.floor(player:GetNetworkPing() * 1000) .. "ms"
         end
     else
-        -- Clean up when toggled off
         local existingGui = player.PlayerGui:FindFirstChild("AntiLagGui")
         if existingGui then
             existingGui:Destroy()
-            Lighting.GlobalShadows = true
+             Lighting.GlobalShadows = true
             settings().Rendering.QualityLevel = 0
         end
     end
