@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (STRICT 40 RANGE) ]] --
+-- [[ trackerv1.lua - Battery Master (TP -> DELAY -> COLLECT) ]] --
 local scriptID = "trackerv1" 
 
 if _G[scriptID] ~= true then
@@ -15,8 +15,8 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_VISUAL_DIST = 100 -- How far you see the beams
-local BRING_DIST = 40      -- STRICT LIMIT: Only bring if 40 studs or closer
+local MAX_VISUAL_DIST = 100
+local TRIGGER_DIST = 40    -- Only starts the sequence if within 40 studs
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
@@ -68,26 +68,28 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             if not success then continue end
             local dist = (root.Position - pos).Magnitude
 
-            -- 1. Visual Beams (Up to 100 studs)
-            if dist <= MAX_VISUAL_DIST then
-                createV1Path(item, root)
-            else
-                removeV1Path(item)
-            end
+            -- Show beams for awareness
+            if dist <= MAX_VISUAL_DIST then createV1Path(item, root) end
 
-            -- 2. Strictly check for 40 studs to start Bringing
-            if dist <= BRING_DIST and not processed[item] then
+            -- Start the sequence at 40 range
+            if dist <= TRIGGER_DIST and not processed[item] then
                 isCollecting = true
                 processed[item] = true
                 
                 task.spawn(function()
+                    -- STEP 1: Teleport YOU to the item
+                    root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                    
+                    -- STEP 2: Tiny delay (Let the server register your new position)
+                    task.wait(0.1)
+                    
+                    -- STEP 3: Bring item to feet and fire remotes
                     local startTime = tick()
-                    -- Hold the item at your feet for 1.2 seconds to ensure collection
-                    while tick() - startTime < 1.2 and item and item.Parent do
-                        -- Teleport item to your anchored position
+                    while tick() - startTime < 1.0 and item and item.Parent do
+                        -- Keep item at your feet while you are at its location
                         item:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
                         
-                        if tick() - startTime > 0.1 then
+                        if tick() - startTime > 0.05 then
                             PickUpRemote:FireServer(item)
                         end
                         RunService.Heartbeat:Wait()
@@ -97,10 +99,10 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
                     
                     task.wait(0.1)
                     isCollecting = false
-                    task.wait(2) -- Reset delay
+                    task.wait(2) -- Reset cooldown
                     processed[item] = nil
                 end)
-                break -- Only grab one item at a time for stability
+                break 
             end
         end
     end
