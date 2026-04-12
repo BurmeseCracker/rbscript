@@ -9,13 +9,12 @@ local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpIte
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 local MAX_DISTANCE = 200 
-local TRIGGER_DIST = 40    -- Distance to Teleport
+local COLLECT_DIST = 40    -- Distance to fire the pickup remote
 local TARGET_NAMES = { ["Fuel"] = true, ["Refined Fuel"] = true }
 
 if _G.TrackerV4Loop then _G.TrackerV4Loop:Disconnect() end
 _G.v4Beams = _G.v4Beams or {}
 local processed = {}
-local isCollecting = false
 
 local function clearV4()
     for model, data in pairs(_G.v4Beams) do
@@ -39,10 +38,14 @@ _G.TrackerV4Loop = RunService.Heartbeat:Connect(function()
                 local itemPos = item:GetPivot().Position
                 local dist = (root.Position - itemPos).Magnitude
                 
-                -- [[ 1. ORIGINAL BEAM LOGIC ]] --
+                -- [[ 1. BEAM LOGIC ]] --
                 if dist <= MAX_DISTANCE and not processed[item] then
                     if not _G.v4Beams[item] then
-                        local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+                        -- Updated to find Union or BasePart
+                        local targetPart = item.PrimaryPart 
+                            or item:FindFirstChildWhichIsA("UnionOperation") 
+                            or item:FindFirstChildWhichIsA("BasePart")
+
                         if targetPart then
                             local attP = Instance.new("Attachment", root)
                             local attB = Instance.new("Attachment", targetPart)
@@ -62,41 +65,24 @@ _G.TrackerV4Loop = RunService.Heartbeat:Connect(function()
                     end
                 end
 
-                -- [[ 2. ADDED TELEPORT & BRING ]] --
-                if dist <= TRIGGER_DIST and not processed[item] and not isCollecting then
-                    local mainPart = item:FindFirstChild("MainPart") or item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
-                    local itemDrag = item:FindFirstChild("ItemDrag")
-                    local ownershipRemote = itemDrag and itemDrag:FindFirstChild("RequestNetworkOwnership")
-
-                    if mainPart and ownershipRemote then
-                        isCollecting = true
-                        processed[item] = true
+                -- [[ 2. AUTO-COLLECT (REMOTE ONLY) ]] --
+                if dist <= COLLECT_DIST and not processed[item] then
+                    processed[item] = true
+                    
+                    task.spawn(function()
+                        -- Fire pickup remote immediately
+                        PickUpRemote:FireServer(item)
+                        task.wait(0.1)
                         
-                        task.spawn(function()
-                            -- Teleport Char
-                            root.CFrame = CFrame.new(itemPos + Vector3.new(0, 3, 0))
-                            
-                            -- Ownership Fix
-                            ownershipRemote:FireServer(mainPart)
-                            task.wait(0.1)
-                            
-                            -- Bring & Collect Loop
-                            local startTime = tick()
-                            while tick() - startTime < 1.0 and item and item.Parent do
-                                item:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
-                                if tick() - startTime > 0.05 then
-                                    PickUpRemote:FireServer(item)
-                                end
-                                RunService.Heartbeat:Wait()
-                            end
-                            
-                            if item and item.Parent then AdjustRemote:FireServer(item) end
-                            task.wait(0.1)
-                            isCollecting = false
-                            task.delay(3, function() processed[item] = nil end)
-                        end)
-                        break 
-                    end
+                        -- Finalize backpack adjustment
+                        if item and item.Parent then 
+                            AdjustRemote:FireServer(item) 
+                        end
+                        
+                        -- Brief delay before this specific item can be tracked again (if it failed)
+                        task.wait(2)
+                        processed[item] = nil
+                    end)
                 end
             end
         end
