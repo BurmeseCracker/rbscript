@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (STEP SEARCH) ]] --
+-- [[ trackerv1.lua - Battery Master (STRICT 40 RANGE) ]] --
 local scriptID = "trackerv1" 
 
 if _G[scriptID] ~= true then
@@ -15,11 +15,9 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local MAX_VISUAL_DIST = 60
+local MAX_VISUAL_DIST = 100 -- How far you see the beams
+local BRING_DIST = 40      -- STRICT LIMIT: Only bring if 40 studs or closer
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
-
--- The steps you asked for
-local DISTANCE_STEPS = {10, 20, 30, 40, 50, 60}
 
 local v1Beams = {}
 local processed = {}
@@ -64,51 +62,46 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
     local root = char and char:FindFirstChild("HumanoidRootPart")
     if not root or isCollecting then return end
 
-    -- Step-by-Step Search Logic
-    local targetItem = nil
-    
-    for _, currentMaxDist in ipairs(DISTANCE_STEPS) do
-        for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-            if TARGET_NAMES[item.Name] and not processed[item] then
-                local itemPos = item:GetPivot().Position
-                local dist = (root.Position - itemPos).Magnitude
-                
-                -- Create beams for everything in range regardless of steps
-                if dist <= MAX_VISUAL_DIST then createV1Path(item, root) end
+    for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
+        if TARGET_NAMES[item.Name] then
+            local success, pos = pcall(function() return item:GetPivot().Position end)
+            if not success then continue end
+            local dist = (root.Position - pos).Magnitude
 
-                -- If we find an item within the current step distance
-                if dist <= currentMaxDist then
-                    targetItem = item
-                    break 
-                end
+            -- 1. Visual Beams (Up to 100 studs)
+            if dist <= MAX_VISUAL_DIST then
+                createV1Path(item, root)
+            else
+                removeV1Path(item)
+            end
+
+            -- 2. Strictly check for 40 studs to start Bringing
+            if dist <= BRING_DIST and not processed[item] then
+                isCollecting = true
+                processed[item] = true
+                
+                task.spawn(function()
+                    local startTime = tick()
+                    -- Hold the item at your feet for 1.2 seconds to ensure collection
+                    while tick() - startTime < 1.2 and item and item.Parent do
+                        -- Teleport item to your anchored position
+                        item:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
+                        
+                        if tick() - startTime > 0.1 then
+                            PickUpRemote:FireServer(item)
+                        end
+                        RunService.Heartbeat:Wait()
+                    end
+                    
+                    if item and item.Parent then AdjustRemote:FireServer(item) end
+                    
+                    task.wait(0.1)
+                    isCollecting = false
+                    task.wait(2) -- Reset delay
+                    processed[item] = nil
+                end)
+                break -- Only grab one item at a time for stability
             end
         end
-        if targetItem then break end -- Stop looking further if we found something close
-    end
-
-    -- If we found the "closest" item based on our steps
-    if targetItem then
-        isCollecting = true
-        processed[targetItem] = true
-        
-        task.spawn(function()
-            local startTime = tick()
-            while tick() - startTime < 1.0 and targetItem and targetItem.Parent do
-                -- Anchor style: Item comes to you
-                targetItem:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
-                
-                if tick() - startTime > 0.1 then
-                    PickUpRemote:FireServer(targetItem)
-                end
-                RunService.Heartbeat:Wait()
-            end
-            
-            if targetItem and targetItem.Parent then AdjustRemote:FireServer(targetItem) end
-            
-            task.wait(0.2)
-            isCollecting = false
-            task.wait(3)
-            processed[targetItem] = nil
-        end)
     end
 end)
