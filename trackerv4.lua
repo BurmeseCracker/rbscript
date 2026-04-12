@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (STRICT MAGNET ONLY) ]] --
+-- [[ trackerv4.lua - Fuel Master (REMOTE ONLY) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -17,7 +17,7 @@ local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack"
 
 -- [[ CONFIG ]] --
 local MAX_VISUAL_DIST = 150
-local BRING_DIST = 40      -- Collection Range
+local COLLECTION_DIST = 40 -- Only picks up if you are within 40 studs
 local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
 
 local v4Beams = {}
@@ -78,38 +78,30 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
                 removeV4Path(item)
             end
 
-            -- 2. MAGNET LOGIC (NO PLAYER TELEPORT)
-            if dist <= BRING_DIST then
+            -- 2. SIMPLE REMOTE PICKUP (NO MOVEMENT)
+            if dist <= COLLECTION_DIST then
                 local drag = item:FindFirstChild("ItemDrag")
                 local dragRemote = drag and drag:FindFirstChild("RequestNetworkOwnership")
                 
-                if dragRemote then
-                    isCollecting = true
-                    processed[item] = true
+                isCollecting = true
+                processed[item] = true
+                
+                task.spawn(function()
+                    -- Claim ownership (helps bypass distance checks in some games)
+                    if dragRemote then dragRemote:FireServer(targetPart) end
                     
-                    task.spawn(function()
-                        -- Tell server we control this object now
-                        dragRemote:FireServer(targetPart)
-                        
-                        local startTime = tick()
-                        -- Pull item to your feet while you stay still
-                        while tick() - startTime < 1.2 and item and item.Parent == SEARCH_FOLDER do
-                            item:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
-                            
-                            if tick() - startTime > 0.05 then
-                                PickUpRemote:FireServer(item)
-                            end
-                            RunService.Heartbeat:Wait()
-                        end
-                        
-                        if item and item.Parent then AdjustRemote:FireServer(item) end
-                        
-                        task.wait(0.1)
-                        isCollecting = false
-                        task.delay(2.5, function() processed[item] = nil end)
-                    end)
-                    break 
-                end
+                    task.wait(0.05)
+                    
+                    -- Fire the pickup remote directly
+                    PickUpRemote:FireServer(item)
+                    task.wait(0.1)
+                    AdjustRemote:FireServer(item)
+                    
+                    task.wait(0.2)
+                    isCollecting = false
+                    task.delay(1.5, function() processed[item] = nil end)
+                end)
+                break 
             end
         end
     end
