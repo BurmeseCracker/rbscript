@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (REMOTE ONLY) ]] --
+-- [[ trackerv4.lua - Fuel Master (DIRECT REMOTE ONLY) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -17,7 +17,7 @@ local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack"
 
 -- [[ CONFIG ]] --
 local MAX_VISUAL_DIST = 150
-local COLLECTION_DIST = 40 -- Only picks up if you are within 40 studs
+local COLLECTION_DIST = 40 
 local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
 
 local v4Beams = {}
@@ -45,7 +45,7 @@ local function createV4Path(model, root)
     local attB = Instance.new("Attachment", targetPart)
     local beam = Instance.new("Beam", root)
     beam.Attachment0, beam.Attachment1 = attP, attB
-    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Red
+    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) 
     beam.Width0, beam.Width1 = 0.6, 0.6
     beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2; beam.FaceCamera = true
     v4Beams[model] = {beam = beam, aP = attP, aB = attB}
@@ -68,31 +68,22 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
             local targetPart = item:FindFirstChild("Union") or item:FindFirstChildWhichIsA("BasePart")
             if not targetPart then continue end
 
-            local pos = targetPart.Position
-            local dist = (root.Position - pos).Magnitude
+            local dist = (root.Position - targetPart.Position).Magnitude
 
-            -- 1. VISUAL RED BEAMS
+            -- 1. Red Visual Beams
             if dist <= MAX_VISUAL_DIST then
                 createV4Path(item, root)
             else
                 removeV4Path(item)
             end
 
-            -- 2. SIMPLE REMOTE PICKUP (NO MOVEMENT)
+            -- 2. Direct Pickup (No Move, No Ownership)
             if dist <= COLLECTION_DIST then
-                local drag = item:FindFirstChild("ItemDrag")
-                local dragRemote = drag and drag:FindFirstChild("RequestNetworkOwnership")
-                
                 isCollecting = true
                 processed[item] = true
                 
                 task.spawn(function()
-                    -- Claim ownership (helps bypass distance checks in some games)
-                    if dragRemote then dragRemote:FireServer(targetPart) end
-                    
-                    task.wait(0.05)
-                    
-                    -- Fire the pickup remote directly
+                    -- Pure Remote Fire
                     PickUpRemote:FireServer(item)
                     task.wait(0.1)
                     AdjustRemote:FireServer(item)
