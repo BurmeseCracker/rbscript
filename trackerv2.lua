@@ -1,121 +1,83 @@
--- [[ SCRAP MASTER: PILE TRACKER & ITEM COLLECTOR ]] --
-local scriptID = "trackerv2" 
+-- [[ trackerv1.lua - Battery Master (TP + OWNERSHIP + BRING) ]] --
+local scriptID = "trackerv1" 
+
+if _G[scriptID] ~= true then
+    repeat task.wait(0.5) until _G[scriptID] == true
+end
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
+local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
--- Folders
-local DROP_FOLDER = workspace:WaitForChild("DroppedItems")
-local PILE_FOLDER = workspace:WaitForChild("Structures")
+local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Interaction"):WaitForChild("PickUpItem")
+local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
--- Remotes
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
-local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
+-- CONFIG
+local TRIGGER_DIST = 40    -- Teleport only when within 40 studs
+local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
--- Config
-local TRACK_DIST = 100      -- How far to see Scrap Piles
-local COLLECT_DIST = 60    -- How far to Bring & Collect Scrap items
-local PILE_NAME = "Scrap Pile"
-local ITEM_NAME = "Scrap"
-
-local activeBeams = {}
 local processed = {}
 local isCollecting = false
 
--- [[ BEAM LOGIC FOR PILES ]] --
-local function removePath(model)
-    local data = activeBeams[model]
-    if data then
-        pcall(function()
-            if data.beam then data.beam:Destroy() end
-            if data.aP then data.aP:Destroy() end
-            if data.aB then data.aB:Destroy() end
-        end)
-        activeBeams[model] = nil
-    end
-end
+if _G.BatteryMasterLoop then _G.BatteryMasterLoop:Disconnect() end
 
-local function createPath(model, root)
-    if activeBeams[model] then return end
-    local targetPart = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
-    if not targetPart then return end
-
-    local attP = Instance.new("Attachment", root)
-    local attB = Instance.new("Attachment", targetPart)
-    local beam = Instance.new("Beam", root)
-    
-    beam.Attachment0, beam.Attachment1 = attP, attB
-    beam.Color = ColorSequence.new(Color3.fromRGB(0, 255, 255)) -- Cyan
-    beam.Width0, beam.Width1, beam.Texture, beam.TextureSpeed, beam.FaceCamera = 0.4, 0.4, "rbxassetid://44611181", 2, true
-    
-    activeBeams[model] = {beam = beam, aP = attP, aB = attB}
-end
-
--- Stop existing loops
-if _G.ScrapMasterLoop then _G.ScrapMasterLoop:Disconnect() end
-
--- [[ MAIN MASTER LOOP ]] --
-_G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
+_G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
     if _G[scriptID] ~= true then return end
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    if not root or isCollecting then return end
 
-    -- 1. TRACK SCRAP PILES (In Structures)
-    if PILE_FOLDER then
-        for _, pile in pairs(PILE_FOLDER:GetChildren()) do
-            if pile.Name == PILE_NAME then
-                local dist = (root.Position - pile:GetPivot().Position).Magnitude
-                if dist <= TRACK_DIST then
-                    createPath(pile, root)
-                else
-                    removePath(pile)
-                end
-            end
-        end
-    end
+    for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
+        if TARGET_NAMES[item.Name] and not processed[item] then
+            -- Find the specific components for this specific battery
+            local mainPart = item:FindFirstChild("MainPart") or item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+            local itemDrag = item:FindFirstChild("ItemDrag")
+            local ownershipRemote = itemDrag and itemDrag:FindFirstChild("RequestNetworkOwnership")
 
-    -- 2. BRING & COLLECT SCRAP ITEMS (In DroppedItems)
-    if DROP_FOLDER and not isCollecting then
-        for _, item in pairs(DROP_FOLDER:GetChildren()) do
-            if item.Name == ITEM_NAME and not processed[item] then
-                local itemPos = item:GetPivot().Position
-                local dist = (root.Position - itemPos).Magnitude
+            if not mainPart or not ownershipRemote then continue end
 
-                if dist <= COLLECT_DIST then
-                    isCollecting = true
-                    processed[item] = true
+            local pos = item:GetPivot().Position
+            local dist = (root.Position - pos).Magnitude
 
-                    -- Bring item to you
-                    item:PivotTo(root.CFrame * CFrame.new(0, -2, 2))
+            -- TRIGGER AT 40 STUDS
+            if dist <= TRIGGER_DIST then
+                isCollecting = true
+                processed[item] = true
+                
+                task.spawn(function()
+                    -- 1. TELEPORT YOU TO ITEM
+                    root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
                     
-                    task.wait(0.1)
-                    PickUpRemote:FireServer(item)
+                    -- 2. CLAIM OWNERSHIP (Prevents server snap-back)
+                    ownershipRemote:FireServer(mainPart)
+                    task.wait(0.1) -- Short delay for ownership to register
                     
-                    task.wait(0.1)
-                    if item and item.Parent then
-                        AdjustRemote:FireServer(item)
+                    -- 3. BRING & COLLECT
+                    local startTime = tick()
+                    while tick() - startTime < 1.0 and item and item.Parent do
+                        -- Pull item to your feet
+                        item:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
+                        
+                        -- Fire the collect remote
+                        if tick() - startTime > 0.05 then
+                            PickUpRemote:FireServer(item)
+                        end
+                        RunService.Heartbeat:Wait()
                     end
-
+                    
+                    -- 4. CLEAN UP
+                    if item and item.Parent then AdjustRemote:FireServer(item) end
                     task.wait(0.1)
                     isCollecting = false
-                    task.delay(5, function() processed[item] = nil end)
-                    break
-                end
+                    
+                    -- Cooldown for this item
+                    task.delay(2, function() processed[item] = nil end)
+                end)
+                break -- Exit loop to focus on one item at a time
             end
-        end
-    end
-
-    -- Cleanup beams for gone piles
-    for model, _ in pairs(activeBeams) do
-        if not model:IsDescendantOf(workspace) then
-            removePath(model)
         end
     end
 end)
-
-print("Scrap Master: Tracking Piles & Collecting Items!")
