@@ -27,8 +27,8 @@ local function ultimateVoidDrop()
 
     if hrp and hum then
         -- ၄ ကြိမ် လုပ်ဆောင်ရန် Loop
-        for i = 1, 2 do
-            print("Void Drop Round: " .. i)
+        for i = 1, 3 do
+       
 
             -- ၁။ Position ကို အောက်သို့ ရွှေ့ခြင်း
             hrp.Anchored = true
