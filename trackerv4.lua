@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (DIRECT REMOTE ONLY) ]] --
+-- [[ trackerv4.lua - Fuel Master (BEAMS + REMOTE ONLY) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -22,7 +22,6 @@ local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
 
 local v4Beams = {}
 local processed = {}
-local isCollecting = false
 
 local function removeV4Path(model)
     local data = v4Beams[model]
@@ -61,7 +60,7 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root or isCollecting then return end
+    if not root then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
@@ -70,29 +69,25 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
 
             local dist = (root.Position - targetPart.Position).Magnitude
 
-            -- 1. Red Visual Beams
+            -- 1. Visual Beams
             if dist <= MAX_VISUAL_DIST then
                 createV4Path(item, root)
             else
                 removeV4Path(item)
             end
 
-            -- 2. Direct Pickup (No Move, No Ownership)
+            -- 2. Direct Collection
             if dist <= COLLECTION_DIST then
-                isCollecting = true
                 processed[item] = true
                 
                 task.spawn(function()
-                    -- Pure Remote Fire
                     PickUpRemote:FireServer(item)
                     task.wait(0.1)
                     AdjustRemote:FireServer(item)
                     
-                    task.wait(0.2)
-                    isCollecting = false
-                    task.delay(1.5, function() processed[item] = nil end)
+                    task.wait(2)
+                    processed[item] = nil
                 end)
-                break 
             end
         end
     end
