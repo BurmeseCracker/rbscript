@@ -21,11 +21,11 @@ RunService.RenderStepped:Connect(function()
                 if hrp and hum and hum.Health > 0 then
                     -- [[ SIZE ADJUSTMENT ]] --
                     -- ဒီနေရာမှာ ကိန်းဂဏန်းကို စိတ်ကြိုက်ပြောင်းနိုင်ပါတယ်
-                    hrp.Size = Vector3.new(20, 20, 20) 
+                    hrp.Size = Vector3.new(15, 15, 15) 
                     
                     hrp.Transparency = 0.7
                     hrp.Color = Color3.fromRGB(255, 0, 0) -- အနီရောင်
-                    hrp.CanCollide = false
+                    hrp.CanCollide = true
                     hrp.Massless = true
                 end
             end
