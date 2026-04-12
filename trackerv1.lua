@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (INSTANT SYNC + BEAMS) ]] --
+-- [[ trackerv1.lua - Battery Master (RANGE COLLECT + BEAMS) ]] --
 local scriptID = "trackerv1" 
 
 -- Wait for Menu Toggle
@@ -18,8 +18,8 @@ local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpIte
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 150 -- Distance for yellow beams
-local COLLECT_DIST = 35     -- Automatic collection range
+local MAX_VISUAL_DIST = 150 -- Distance to see yellow beams
+local COLLECT_DIST = 35     -- ONLY collect if within this distance
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
@@ -57,7 +57,6 @@ end
 if _G.BatteryMasterLoop then _G.BatteryMasterLoop:Disconnect() end
 
 _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
-    -- Check if Toggle is ON in Menu
     if _G[scriptID] ~= true then 
         for model, _ in pairs(v1Beams) do removeV1Path(model) end
         return 
@@ -72,30 +71,29 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             local pos = item:GetPivot().Position
             local dist = (root.Position - pos).Magnitude
 
-            -- 1. SHOW BEAMS
+            -- 1. SHOW BEAMS (Visual only)
             if dist <= MAX_VISUAL_DIST then
                 createV1Path(item, root)
             else
                 removeV1Path(item)
             end
 
-            -- 2. INSTANT SYNC COLLECTION
+            -- 2. RANGE COLLECTION
+            -- Only triggers if you walk within COLLECT_DIST
             if dist <= COLLECT_DIST then
                 processed[item] = true
 
                 task.spawn(function()
                     task.wait(0.1) -- Required server delay
                     
-                    -- Firing both together ensures the backpack accepts the item
+                    -- Instant Sync Fire
                     PickUpRemote:FireServer(item)
                     AdjustRemote:FireServer(item)
                     
-                    -- Wait briefly before cleaning up visuals
                     task.wait(0.2)
                     removeV1Path(item)
                     
-                    -- Cooldown to prevent item "vanishing" glitches
-                    task.wait(2.5)
+                    task.wait(2.5) -- Cooldown
                     processed[item] = nil
                 end)
             end
@@ -103,4 +101,4 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Battery Master (Instant Sync) Loaded.")
+print("Battery Master (Range: " .. COLLECT_DIST .. ") Loaded.")
