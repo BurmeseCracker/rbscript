@@ -1,4 +1,4 @@
--- [[ BATTERY MASTER - SEPARATE BRING & COLLECT ]] --
+-- [[ trackerv1.lua - Battery Master ]] --
 local scriptID = "trackerv1" 
 
 local Players = game:GetService("Players")
@@ -10,14 +10,10 @@ local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
--- Config
-local MAX_DISTANCE = 100     -- Beam distance
-local BRING_DIST = 100        -- Distance to start pulling item to you
-local COLLECT_DIST = 20      -- Distance to actually fire the PickUp Remote
-local TARGET_NAMES = {
-    ["Battery"] = true, 
-    ["Battery Pack"] = true
-}
+local MAX_DISTANCE = 200
+local BRING_DIST = 60
+local COLLECT_DIST = 10
+local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
 local processed = {}
@@ -44,13 +40,18 @@ local function createV1Path(model, root)
     local attB = Instance.new("Attachment", targetPart)
     local beam = Instance.new("Beam", root)
     beam.Attachment0, beam.Attachment1 = attP, attB
-    beam.Color = ColorSequence.new(Color3.fromRGB(255, 215, 0))
-    beam.Width0, beam.Width1, beam.Texture, beam.TextureSpeed, beam.FaceCamera = 0.5, 0.5, "rbxassetid://44611181", 2, true
+    beam.Color = ColorSequence.new(Color3.fromRGB(255, 215, 0)) -- Gold
+    beam.Width0, beam.Width1 = 0.5, 0.5
+    beam.Texture = "rbxassetid://44611181"
+    beam.TextureSpeed = 2; beam.FaceCamera = true
     v1Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
 _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
-    if _G[scriptID] ~= true then return end
+    if _G[scriptID] ~= true then 
+        for model, _ in pairs(v1Beams) do removeV1Path(model) end
+        return 
+    end
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -60,43 +61,27 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
         if TARGET_NAMES[item.Name] then
             local success, pos = pcall(function() return item:GetPivot().Position end)
             if not success then continue end
-
             local dist = (root.Position - pos).Magnitude
 
             if dist <= MAX_DISTANCE then
                 createV1Path(item, root)
-                
-                -- [[ 1. BRING LOGIC ]] --
-                -- If item is within 60 studs, pull it to your feet constantly
                 if dist <= BRING_DIST then
                     item:PivotTo(root.CFrame * CFrame.new(0, -2, -2))
-                end
-
-                -- [[ 2. COLLECT LOGIC ]] --
-                -- Only fire remotes if the item is successfully brought within 10 studs
-                if dist <= COLLECT_DIST and not processed[item] and not isCollecting then
-                    isCollecting = true
-                    processed[item] = true
-                    
-                    task.wait(0.1) -- Small delay to let the game register item position
-                    PickUpRemote:FireServer(item)
-                    
-                    task.wait(0.1)
-                    if item and item.Parent then 
-                        AdjustRemote:FireServer(item) 
+                    if dist <= COLLECT_DIST and not processed[item] and not isCollecting then
+                        isCollecting = true
+                        processed[item] = true
+                        task.wait(0.1)
+                        PickUpRemote:FireServer(item)
+                        task.wait(0.1)
+                        if item and item.Parent then AdjustRemote:FireServer(item) end
+                        task.wait(0.1)
+                        isCollecting = false
+                        task.delay(5, function() processed[item] = nil end)
                     end
-
-                    task.wait(0.2)
-                    isCollecting = false
-                    task.delay(3, function() processed[item] = nil end)
                 end
             else
                 removeV1Path(item)
             end
         end
-    end
-
-    for model, _ in pairs(v1Beams) do
-        if not model:IsDescendantOf(workspace) then removeV1Path(model) end
     end
 end)
