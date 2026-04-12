@@ -1,7 +1,6 @@
--- [[ trackerv1.lua - Battery Master ACTIVE FIX ]] --
+-- [[ trackerv1.lua - Battery Master (FORCE BRING - NO PLAYER TP) ]] --
 local scriptID = "trackerv1" 
 
--- Force wait until the menu actually sets the value to true
 if _G[scriptID] ~= true then
     repeat task.wait(0.5) until _G[scriptID] == true
 end
@@ -16,8 +15,7 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 local MAX_DISTANCE = 200
-local BRING_DIST = 60
-local COLLECT_DIST = 15 -- Increased slightly for better reliability
+local BRING_DIST = 60      -- Range where battery starts flying to you
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
@@ -47,21 +45,13 @@ local function createV1Path(model, root)
     beam.Attachment0, beam.Attachment1 = attP, attB
     beam.Color = ColorSequence.new(Color3.fromRGB(255, 215, 0))
     beam.Width0, beam.Width1 = 0.5, 0.5
-    beam.Texture = "rbxassetid://44611181"
-    beam.TextureSpeed = 2; beam.FaceCamera = true
+    beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2; beam.FaceCamera = true
     v1Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
--- Clean up any old loops before starting a new one
-if _G.BatteryMasterLoop then 
-    _G.BatteryMasterLoop:Disconnect() 
-    _G.BatteryMasterLoop = nil
-end
-
-print("Battery Master: Script Linked and Waiting for Logic")
+if _G.BatteryMasterLoop then _G.BatteryMasterLoop:Disconnect() end
 
 _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
-    -- If the menu toggle goes OFF, stop the visuals and wait
     if _G[scriptID] ~= true then 
         for model, _ in pairs(v1Beams) do removeV1Path(model) end
         return 
@@ -80,27 +70,33 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             if dist <= MAX_DISTANCE then
                 createV1Path(item, root)
                 
-                -- BRING LOGIC
-                if dist <= BRING_DIST then
-                    item:PivotTo(root.CFrame * CFrame.new(0, -2, -3))
+                -- [[ FORCE BRING & COLLECT (CHARACTER STAYS STILL) ]] --
+                if dist <= BRING_DIST and not processed[item] and not isCollecting then
+                    isCollecting = true
+                    processed[item] = true
                     
-                    -- COLLECT LOGIC
-                    if dist <= COLLECT_DIST and not processed[item] and not isCollecting then
-                        isCollecting = true
-                        processed[item] = true
+                    task.spawn(function()
+                        -- Force-Bring Loop: Keeps item at your feet for 1.2 seconds
+                        local startTime = tick()
+                        while tick() - startTime < 1.2 and item and item.Parent do
+                            -- Move item to you every frame
+                            item:PivotTo(root.CFrame * CFrame.new(0, -2, -1))
+                            
+                            -- Fire remote while it is being forced to your position
+                            if tick() - startTime > 0.2 then
+                                PickUpRemote:FireServer(item)
+                            end
+                            RunService.Heartbeat:Wait()
+                        end
                         
-                        task.spawn(function()
-                            task.wait(0.1)
-                            PickUpRemote:FireServer(item)
-                            task.wait(0.2)
-                            if item and item.Parent then AdjustRemote:FireServer(item) end
-                            task.wait(0.2)
-                            isCollecting = false
-                            -- Item reset delay
-                            task.wait(5)
-                            processed[item] = nil
-                        end)
-                    end
+                        -- Final check/adjust
+                        if item and item.Parent then AdjustRemote:FireServer(item) end
+                        
+                        task.wait(0.2)
+                        isCollecting = false
+                        task.wait(3) -- Delay before this specific item can be tracked again
+                        processed[item] = nil
+                    end)
                 end
             else
                 removeV1Path(item)
