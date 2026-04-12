@@ -16,7 +16,7 @@ local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpIte
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- Config
-local TRACK_DIST = 300      -- How far to see Scrap Piles
+local TRACK_DIST = 100      -- How far to see Scrap Piles
 local COLLECT_DIST = 60    -- How far to Bring & Collect Scrap items
 local PILE_NAME = "Scrap Pile"
 local ITEM_NAME = "Scrap"
