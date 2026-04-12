@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (FORCE BRING - NO PLAYER TP) ]] --
+-- [[ trackerv1.lua - Battery Master (PLAYER TP + FORCE BRING) ]] --
 local scriptID = "trackerv1" 
 
 if _G[scriptID] ~= true then
@@ -15,7 +15,7 @@ local PickUpRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Int
 local AdjustRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 local MAX_DISTANCE = 200
-local BRING_DIST = 60      -- Range where battery starts flying to you
+local TP_DIST = 60 
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
@@ -59,7 +59,7 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    if not root or isCollecting then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] then
@@ -70,33 +70,32 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             if dist <= MAX_DISTANCE then
                 createV1Path(item, root)
                 
-                -- [[ FORCE BRING & COLLECT (CHARACTER STAYS STILL) ]] --
-                if dist <= BRING_DIST and not processed[item] and not isCollecting then
+                if dist <= TP_DIST and not processed[item] then
                     isCollecting = true
                     processed[item] = true
                     
                     task.spawn(function()
-                        -- Force-Bring Loop: Keeps item at your feet for 1.2 seconds
+                        -- 1. TELEPORT YOU TO ITEM
+                        root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                        
+                        -- 2. FORCE HOLD ITEM AT FEET
                         local startTime = tick()
-                        while tick() - startTime < 1.2 and item and item.Parent do
-                            -- Move item to you every frame
-                            item:PivotTo(root.CFrame * CFrame.new(0, -2, -1))
-                            
-                            -- Fire remote while it is being forced to your position
-                            if tick() - startTime > 0.2 then
+                        while tick() - startTime < 1.0 and item and item.Parent do
+                            item:PivotTo(root.CFrame * CFrame.new(0, -3, 0))
+                            if tick() - startTime > 0.1 then
                                 PickUpRemote:FireServer(item)
                             end
                             RunService.Heartbeat:Wait()
                         end
                         
-                        -- Final check/adjust
                         if item and item.Parent then AdjustRemote:FireServer(item) end
                         
                         task.wait(0.2)
                         isCollecting = false
-                        task.wait(3) -- Delay before this specific item can be tracked again
+                        task.wait(3)
                         processed[item] = nil
                     end)
+                    break 
                 end
             else
                 removeV1Path(item)
