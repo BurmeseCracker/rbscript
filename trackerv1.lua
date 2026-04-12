@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (BEAMS + TP COLLECT) ]] --
+-- [[ trackerv1.lua - Battery Master (VISUAL BEAMS + RANGE COLLECT) ]] --
 local scriptID = "trackerv1" 
 
 -- Wait for Menu Toggle
@@ -18,13 +18,12 @@ local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpIte
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 100 -- Distance to see beams
-local TP_DIST = 40          -- Distance to teleport and collect
+local MAX_VISUAL_DIST = 150 -- Distance to see yellow beams
+local COLLECT_DIST = 35     -- Distance to auto-collect (No TP)
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
 local processed = {}
-local isTeleporting = false
 
 -- [[ BEAM LOGIC ]] --
 local function removeV1Path(model)
@@ -69,41 +68,38 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
     if not root then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-        if TARGET_NAMES[item.Name] and not processed[item] then
+        if TARGET_NAMES[item.Name] then
             local pos = item:GetPivot().Position
             local dist = (root.Position - pos).Magnitude
 
             -- 1. SHOW BEAMS
-            if dist <= MAX_VISUAL_DIST then
+            if dist <= MAX_VISUAL_DIST and not processed[item] then
                 createV1Path(item, root)
             else
                 removeV1Path(item)
             end
 
-            -- 2. INSTANT TELEPORT COLLECT
-            if dist <= TP_DIST and not isTeleporting then
-                isTeleporting = true
+            -- 2. RANGE COLLECTION (NO TELEPORT)
+            if dist <= COLLECT_DIST and not processed[item] then
                 processed[item] = true
                 removeV1Path(item)
 
                 task.spawn(function()
-                    -- Teleport to item
-                    root.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
-                    task.wait(0.05)
-                    
-                    -- Collect
+                    -- Fire collection remotes
                     PickUpRemote:FireServer(item)
                     task.wait(0.1)
-                    AdjustRemote:FireServer(item)
                     
-                    isTeleporting = false
+                    if item and item.Parent then
+                        AdjustRemote:FireServer(item)
+                    end
+                    
                     -- Cooldown for this specific item
-                    task.delay(3, function() processed[item] = nil end)
+                    task.wait(2)
+                    processed[item] = nil
                 end)
-                break 
             end
         end
     end
 end)
 
-print("Battery TP Collect Loaded.")
+print("Battery Range Collect Loaded.")
