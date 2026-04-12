@@ -16,7 +16,7 @@ local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpIte
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 150 
+local MAX_VISUAL_DIST = 40 
 local MAGNET_DIST = 40     -- Distance to pull item to you
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
