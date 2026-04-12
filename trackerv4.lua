@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (SYNC FIXED) ]] --
+-- [[ trackerv4.lua - Fuel Master (GLOBAL RANGE TP) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -15,8 +15,8 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
-local MAX_VISUAL_DIST = 150 
-local COLLECT_DIST = 40     
+-- CONFIG
+local MAX_VISUAL_DIST = 5000 -- Increased to see almost everything
 local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
 
 local v4Beams = {}
@@ -69,39 +69,39 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
             local targetCFrame = targetPart.CFrame
             local dist = (root.Position - targetCFrame.Position).Magnitude
 
+            -- Always show beam if within visual range
             if dist <= MAX_VISUAL_DIST then
                 createV4Path(item, root)
-            else
-                removeV4Path(item)
             end
 
-            if dist <= COLLECT_DIST then
-                processed[item] = true
+            -- NO DISTANCE CHECK: Instantly start collection
+            processed[item] = true
 
-                task.spawn(function()
-                    -- 1. TELEPORT & FREEZE
-                    root.Anchored = true
-                    char:PivotTo(targetCFrame * CFrame.new(0, 3, 0))
-                    
-                    -- 2. WAIT FOR SERVER SYNC
-                    task.wait(0.25) 
-                    
-                    -- 3. ATTEMPT COLLECTION
-                    PickUpRemote:FireServer(item)
-                    task.wait(0.1)
-                    
-                    -- 4. SUCCESS CHECK
-                    if item.Parent ~= SEARCH_FOLDER then
-                        AdjustRemote:FireServer(item)
-                        removeV4Path(item) 
-                    end
-                    
-                    -- 5. UNFREEZE & COOLDOWN
-                    root.Anchored = false
-                    task.wait(1.5)
-                    processed[item] = nil
-                end)
-            end
+            task.spawn(function()
+                -- 1. TELEPORT & FREEZE
+                root.Anchored = true
+                char:PivotTo(targetCFrame * CFrame.new(0, 3, 0))
+                
+                -- 2. SYNC WAIT (Crucial for Global TP)
+                task.wait(0.3) 
+                
+                -- 3. COLLECTION
+                PickUpRemote:FireServer(item)
+                task.wait(0.1)
+                
+                if item.Parent ~= SEARCH_FOLDER then
+                    AdjustRemote:FireServer(item)
+                    removeV4Path(item) 
+                end
+                
+                -- 4. UNFREEZE
+                root.Anchored = false
+                task.wait(1) -- Short cooldown before next item
+                processed[item] = nil
+            end)
+            
+            -- Break so it only handles one item at a time (prevents glitching)
+            break 
         end
     end
 end)
