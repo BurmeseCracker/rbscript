@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (VISUAL BEAMS + RANGE COLLECT) ]] --
+-- [[ trackerv4.lua - Fuel Master (TP COLLECT) ]] --
 local scriptID = "trackerv4" 
 
 -- Wait for Menu Toggle
@@ -18,8 +18,8 @@ local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpIte
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 150 -- Distance to see red beams
-local COLLECT_DIST = 40     -- Distance to auto-collect (No TP/Bring)
+local MAX_VISUAL_DIST = 150 
+local COLLECT_DIST = 40     -- If within 40 studs, it will TP and grab
 local TARGET_NAMES = {["Fuel"] = true, ["Refined Fuel"] = true}
 
 local v4Beams = {}
@@ -40,7 +40,6 @@ end
 
 local function createV4Path(model, root)
     if v4Beams[model] then return end
-    -- Targets Union first for Fuel items
     local targetPart = model:FindFirstChild("Union") or model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
     if not targetPart then return end
 
@@ -58,7 +57,6 @@ end
 if _G.FuelMasterLoop then _G.FuelMasterLoop:Disconnect() end
 
 _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
-    -- Check if Toggle is ON in Menu
     if _G[scriptID] ~= true then 
         for model, _ in pairs(v4Beams) do removeV4Path(model) end
         return 
@@ -69,36 +67,41 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
     if not root then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-        if TARGET_NAMES[item.Name] then
-            -- Use GetPivot or Union position for distance
-            local pos = item:GetPivot().Position
-            local dist = (root.Position - pos).Magnitude
+        if TARGET_NAMES[item.Name] and not processed[item] then
+            -- Find the Union/Part to TP to
+            local targetPart = item:FindFirstChild("Union") or item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+            if not targetPart then continue end
+            
+            local targetPos = targetPart.Position
+            local dist = (root.Position - targetPos).Magnitude
 
             -- 1. SHOW BEAMS
-            if dist <= MAX_VISUAL_DIST and not processed[item] then
+            if dist <= MAX_VISUAL_DIST then
                 createV4Path(item, root)
             else
                 removeV4Path(item)
             end
 
-            -- 2. RANGE COLLECTION (NO TELEPORT / NO BRING)
-            if dist <= COLLECT_DIST and not processed[item] then
+            -- 2. TP COLLECTION
+            if dist <= COLLECT_DIST then
                 processed[item] = true
                 removeV4Path(item)
 
                 task.spawn(function()
-                    -- Added delay before firing as requested
-                    task.wait(1)
+                    -- Teleport ME to THEM
+                    root.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
+                    
+                    task.wait(0.1) -- Small delay to ensure server sees you there
                     
                     -- Fire collection remotes
                     PickUpRemote:FireServer(item)
-                    task.wait(1)
+                    task.wait(0.1)
                     
                     if item and item.Parent then
                         AdjustRemote:FireServer(item)
                     end
                     
-                    -- Cooldown for this specific item
+                    -- Cooldown
                     task.wait(2)
                     processed[item] = nil
                 end)
@@ -107,4 +110,4 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Fuel Range Collect Loaded.")
+print("Fuel TP Collect Loaded.")
