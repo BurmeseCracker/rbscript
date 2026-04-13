@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (NO DISTANCE LIMIT) ]] --
+-- [[ trackerv4.lua - Fuel Master (WITH COLLECT DISTANCE) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -15,7 +15,8 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local TRACK_DIST = 300    -- ပစ္စည်းလှမ်းမြင်ရမယ့်အကွာအဝေး (Visual Only)
+local TRACK_DIST = 300    -- ပစ္စည်းကို အနီရောင်တန်းလေးနဲ့ လှမ်းမြင်ရမယ့် အကွာအဝေး
+local COLLECT_DIST = 30   -- ပစ္စည်းကို တကယ်ကောက်မယ့် အကွာအဝေး (အနားရောက်မှကောက်မယ်)
 local TARGET_NAME = "Fuel"
 
 local v4Beams = {}
@@ -63,25 +64,33 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
     if not root then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-        -- Distance မစစ်တော့ဘဲ Name တူတာနဲ့ တန်းလုပ်မယ်
         if item.Name == TARGET_NAME and not processedItems[item] then
-            processedItems[item] = true -- Repeat မဖြစ်အောင် Lock လုပ်မယ်
-            
-            -- Visual အတွက် Beam ပြပေးမယ်
-            createV4Path(item, root)
+            local pos = item:GetPivot().Position
+            local dist = (root.Position - pos).Magnitude
 
-            task.spawn(function()
-                -- Backpack script logic အတိုင်း item ကို တန်းသိမ်းမယ်
-                AdjustRemote:FireServer(item)
-                
-                -- သိမ်းပြီးရင် Beam ကို 0.2s နေရင်ဖျက်မယ်
-                task.wait(0.2)
+            -- ၁။ Visual Beam ပြသခြင်း (TRACK_DIST အတွင်းရှိရင် Beam ပြမယ်)
+            if dist <= TRACK_DIST then
+                createV4Path(item, root)
+            else
                 removeV4Path(item)
-                
-                -- 1 စက္ကန့်နေမှ နောက်တစ်ခါ ထပ်စစ်မယ်
-                task.wait(1)
-                processedItems[item] = nil
-            end)
+            end
+
+            -- ၂။ ပစ္စည်းသိမ်းခြင်း (COLLECT_DIST အတွင်း ရောက်မှသာ Fire လုပ်မယ်)
+            if dist <= COLLECT_DIST then
+                processedItems[item] = true 
+
+                task.spawn(function()
+                    -- Backpack remote ကို fire လုပ်မယ်
+                    AdjustRemote:FireServer(item)
+                    
+                    task.wait(0.2)
+                    removeV4Path(item)
+                    
+                    -- ၁ စက္ကန့် Cooldown ထားမယ်
+                    task.wait(1)
+                    processedItems[item] = nil
+                end)
+            end
         end
     end
     
@@ -93,4 +102,4 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Fuel Master: No Collect Distance (Instant Pick) Loaded.")
+print("Fuel Master: Collect Distance (Limit) Enabled.")
