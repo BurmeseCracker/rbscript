@@ -1,4 +1,4 @@
--- [[ trackerv2.lua - Scrap Master (FIXED DISABLE & CYAN ONLY) ]] --
+-- [[ trackerv2.lua - Scrap Master (TOTAL BEAM FIX) ]] --
 local scriptID = "trackerv2" 
 
 local Players = game:GetService("Players")
@@ -64,7 +64,7 @@ end
 if _G.ScrapMasterLoop then _G.ScrapMasterLoop:Disconnect() end
 
 _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
-    -- MENU OFF ဖြစ်သွားရင် BEAM အကုန်ဖျက်ပြီး LOOP ကို ရပ်ပစ်မယ်
+    -- ၁။ MENU OFF ရင် ချက်ချင်း Beam အကုန်ဖျက်မယ်
     if _G[scriptID] ~= true then 
         clearAllBeams()
         return 
@@ -75,18 +75,20 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     local tool = char and char:FindFirstChildOfClass("Tool")
     if not root then return end
 
-    -- 1. TRACK & AUTO-HIT SCRAP PILES (CYAN BEAM ONLY)
+    -- ၂။ Scrap Pile များ (Cyan Beam)
+    local currentPiles = {}
     local targets = {}
     local canHit = false
     
     for _, pile in pairs(PILE_FOLDER:GetChildren()) do
         if pile.Name == PILE_NAME then
+            currentPiles[pile] = true -- လက်ရှိရှိနေတဲ့ pile ကို မှတ်ထားမယ်
             local pilePart = pile.PrimaryPart or pile:FindFirstChildWhichIsA("BasePart")
             if pilePart then
                 local dist = (root.Position - pilePart.Position).Magnitude
                 
                 if dist <= TRACK_DIST then
-                    createPath(pile, root, Color3.fromRGB(0, 255, 255)) -- Cyan
+                    createPath(pile, root, Color3.fromRGB(0, 255, 255))
                 else
                     removePath(pile)
                 end
@@ -99,6 +101,7 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
 
+    -- ၃။ Auto-Hit Logic
     if canHit and tool and tick() - lastSwing >= SWING_COOLDOWN then
         local hitRemote = tool:FindFirstChild("HitTargets")
         local swingRemote = tool:FindFirstChild("Swing")
@@ -109,13 +112,12 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
 
-    -- 2. SILENT COLLECT DROPPED SCRAP (NO BEAM)
+    -- ၄။ Silent Collect (Dropped Scrap)
     for _, item in pairs(DROP_FOLDER:GetChildren()) do
         if item.Name == ITEM_NAME and not processedItems[item] then
             local itemPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
             if itemPart then
                 local dist = (root.Position - itemPart.Position).Magnitude
-
                 if dist <= COLLECT_DIST then
                     processedItems[item] = true
                     task.spawn(function()
@@ -129,10 +131,12 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
     
-    -- Orphaned beam cleanup
+    -- ၅။ (CRITICAL FIX) ရှိမနေတော့တဲ့ model တွေရဲ့ beam တွေကို အတင်းဖျက်မယ်
     for model, _ in pairs(activeBeams) do
-        if not model or not model.Parent then removePath(model) end
+        if not model or not model.Parent or (model.Parent == PILE_FOLDER and not currentPiles[model]) then
+            removePath(model)
+        end
     end
 end)
 
-print("Scrap Master V2 Fixed: Cyan Only & Quick Disable.")
+print("Scrap Master V2: Beam Removal Fix Loaded.")
