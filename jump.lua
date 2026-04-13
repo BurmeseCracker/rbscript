@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
 -- CONFIG
-local JUMP_POWER_CUSTOM = 40 
+local JUMP_POWER_CUSTOM = 100 
 local JUMP_POWER_DEFAULT = 50 
 local PLATFORM_SIZE = Vector3.new(6, 0.5, 6) -- ခြေထောက်အောက်က part ရဲ့ အရွယ်အစား
 
