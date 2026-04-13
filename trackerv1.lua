@@ -1,7 +1,6 @@
--- [[ trackerv1.lua - Battery Master (TELEPORT + 60 DISTANCE) ]] --
+-- [[ trackerv1.lua - Battery Master (TELEPORT + INSTANT JUMP) ]] --
 local scriptID = "trackerv1" 
 
--- Wait for Menu Toggle
 if _G[scriptID] ~= true then
     repeat task.wait(0.5) until _G[scriptID] == true
 end
@@ -12,19 +11,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
--- Remotes
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 150 -- Beam လှမ်းမြင်ရမယ့် အကွာအဝေး
-local COLLECT_DIST = 60     -- ဒီအကွာအဝေးထဲရောက်မှ Teleport လုပ်ပြီး သိမ်းမယ်
+local MAX_VISUAL_DIST = 150 
+local COLLECT_DIST = 60     
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
 local processed = {}
 
--- [[ BEAM LOGIC ]] --
 local function removeV1Path(model)
     local data = v1Beams[model]
     if data then
@@ -46,7 +43,7 @@ local function createV1Path(model, root)
     local attB = Instance.new("Attachment", targetPart)
     local beam = Instance.new("Beam", root)
     beam.Attachment0, beam.Attachment1 = attP, attB
-    beam.Color = ColorSequence.new(Color3.fromRGB(255, 215, 0)) -- Yellow
+    beam.Color = ColorSequence.new(Color3.fromRGB(255, 215, 0)) 
     beam.Width0, beam.Width1 = 0.5, 0.5
     beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2; beam.FaceCamera = true
     v1Beams[model] = {beam = beam, aP = attP, aB = attB}
@@ -63,7 +60,8 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    local hum = char and char:FindFirstChild("Humanoid")
+    if not root or not hum then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
@@ -73,42 +71,41 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             local pos = targetPart.Position
             local dist = (root.Position - pos).Magnitude
 
-            -- 1. Visual Beam (အဝေးကနေ မြင်ရအောင်)
             if dist <= MAX_VISUAL_DIST then
                 createV1Path(item, root)
             else
                 removeV1Path(item)
             end
 
-            -- 2. Teleport & Collection (60 distance အတွင်းရောက်မှ လုပ်မယ်)
+            -- TELEPORT + INSTANT JUMP + COLLECTION
             if dist <= COLLECT_DIST then
                 processed[item] = true
 
                 task.spawn(function()
-                    -- Character ကို ပစ္စည်းဆီ Teleport လုပ်မယ်
-                    root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                    -- ၁။ Velocity ကို ဖြတ်မယ်
+                    root.AssemblyLinearVelocity = Vector3.new(0,0,0)
                     
-                    task.wait(0.1) -- Stability delay
+                    -- ၂။ Teleport လုပ်မယ် (ပစ္စည်းရဲ့ အပေါ်တည့်တည့်ကို)
+                    root.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
                     
-                    -- ပစ္စည်းကို သိမ်းမယ်
+                    -- ၃။ INSTANT JUMP (ခုန်ခိုင်းမယ်)
+                    -- Server က Position အသစ်ကို လက်ခံသွားအောင် Force Jump လုပ်တာပါ
+                    hum:ChangeState(Enum.HumanoidStateType.Jumping) 
+                    
+                    task.wait(0.1) -- Physics Update စောင့်ချိန်
+                    
+                    -- ၄။ ပစ္စည်းကို သိမ်းမယ်
                     AdjustRemote:FireServer(item)
                     
                     task.wait(0.2)
                     removeV1Path(item)
                     
-                    task.wait(1.5) -- Cooldown
+                    task.wait(2.0) -- Cooldown
                     processed[item] = nil
                 end)
             end
         end
     end
-    
-    -- Cleanup
-    for model, _ in pairs(v1Beams) do
-        if not model or not model.Parent or not model:IsDescendantOf(workspace) then
-            removeV1Path(model)
-        end
-    end
 end)
 
-print("Battery Master (Teleport + 60 Dist) Loaded.")
+print("Battery Master (Teleport + Instant Jump) Loaded.")
