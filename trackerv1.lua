@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (BACKPACK SYNC FIXED) ]] --
+-- [[ trackerv1.lua - Battery Master (TELEPORT + 60 DISTANCE) ]] --
 local scriptID = "trackerv1" 
 
 -- Wait for Menu Toggle
@@ -17,8 +17,8 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 100 -- Beam မြင်ရမယ့် အကွာအဝေး
-local COLLECT_DIST = 60     -- အနားရောက်မှ ကောက်မယ့် အကွာအဝေး
+local MAX_VISUAL_DIST = 150 -- Beam လှမ်းမြင်ရမယ့် အကွာအဝေး
+local COLLECT_DIST = 60     -- ဒီအကွာအဝေးထဲရောက်မှ Teleport လုပ်ပြီး သိမ်းမယ်
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
@@ -67,36 +67,43 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
-            local pos = item:GetPivot().Position
+            local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+            if not targetPart then continue end
+            
+            local pos = targetPart.Position
             local dist = (root.Position - pos).Magnitude
 
-            -- 1. SHOW BEAMS (Visual Only)
+            -- 1. Visual Beam (အဝေးကနေ မြင်ရအောင်)
             if dist <= MAX_VISUAL_DIST then
                 createV1Path(item, root)
             else
                 removeV1Path(item)
             end
 
-            -- 2. BACKPACK SYNC COLLECTION
-            -- အရင်ကလို PickUpRemote မသုံးတော့ဘဲ Backpack logic အတိုင်း တိုက်ရိုက်သိမ်းမယ်
+            -- 2. Teleport & Collection (60 distance အတွင်းရောက်မှ လုပ်မယ်)
             if dist <= COLLECT_DIST then
                 processed[item] = true
 
                 task.spawn(function()
-                    -- Server ဆီကို item model တိုက်ရိုက်ပို့ပြီး သိမ်းခိုင်းမယ်
+                    -- Character ကို ပစ္စည်းဆီ Teleport လုပ်မယ်
+                    root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                    
+                    task.wait(0.1) -- Stability delay
+                    
+                    -- ပစ္စည်းကို သိမ်းမယ်
                     AdjustRemote:FireServer(item)
                     
                     task.wait(0.2)
                     removeV1Path(item)
                     
-                    task.wait(1.5) -- Cooldown နည်းနည်းလျှော့ထားတယ်
+                    task.wait(1.5) -- Cooldown
                     processed[item] = nil
                 end)
             end
         end
     end
     
-    -- Orphaned beams ရှင်းမယ် (ပစ္စည်းပျောက်သွားရင် beam ဖျက်မယ်)
+    -- Cleanup
     for model, _ in pairs(v1Beams) do
         if not model or not model.Parent or not model:IsDescendantOf(workspace) then
             removeV1Path(model)
@@ -104,4 +111,4 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Battery Master (Backpack Sync Mode) Loaded.")
+print("Battery Master (Teleport + 60 Dist) Loaded.")
