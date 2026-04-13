@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (BACKPACK SYNC FIXED) ]] --
+-- [[ trackerv4.lua - Fuel Master (NO DISTANCE LIMIT) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -12,12 +12,10 @@ local player = Players.LocalPlayer
 
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
--- Backpack script ထဲက logic အတိုင်း remote ကို ယူမယ်
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local TRACK_DIST = 150    
-local COLLECT_DIST = 20   -- Range ကို backpack script ထဲက 12+ အတိုင်း ပိုနီးအောင် ထားတယ်
+local TRACK_DIST = 300    -- ပစ္စည်းလှမ်းမြင်ရမယ့်အကွာအဝေး (Visual Only)
 local TARGET_NAME = "Fuel"
 
 local v4Beams = {}
@@ -65,39 +63,29 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
     if not root then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-        -- Item name စစ်ဆေးမယ်
+        -- Distance မစစ်တော့ဘဲ Name တူတာနဲ့ တန်းလုပ်မယ်
         if item.Name == TARGET_NAME and not processedItems[item] then
-            local pos = item:GetPivot().Position
-            local dist = (root.Position - pos).Magnitude
+            processedItems[item] = true -- Repeat မဖြစ်အောင် Lock လုပ်မယ်
+            
+            -- Visual အတွက် Beam ပြပေးမယ်
+            createV4Path(item, root)
 
-            -- Visual Beam ပြမယ်
-            if dist <= TRACK_DIST then
-                createV4Path(item, root)
-            else
-                removeV4Path(item)
-            end
-
-            -- Backpack Logic အရ Pickup လုပ်မယ်
-            if dist <= COLLECT_DIST then
-                processedItems[item] = true
+            task.spawn(function()
+                -- Backpack script logic အတိုင်း item ကို တန်းသိမ်းမယ်
+                AdjustRemote:FireServer(item)
                 
-                task.spawn(function()
-                    -- Backpack script logic အတိုင်း item model ကို တိုက်ရိုက်ပို့မယ်
-                    AdjustRemote:FireServer(item)
-                    
-                    -- ခေတ္တစောင့်ပြီး Visual ဖျောက်မယ်
-                    task.wait(0.2)
-                    removeV4Path(item)
-                    
-                    -- Cooldown (ပစ္စည်း တကယ် ပျောက်/မပျောက် စောင့်ကြည့်မယ်)
-                    task.wait(1.5)
-                    processedItems[item] = nil
-                end)
-            end
+                -- သိမ်းပြီးရင် Beam ကို 0.2s နေရင်ဖျက်မယ်
+                task.wait(0.2)
+                removeV4Path(item)
+                
+                -- 1 စက္ကန့်နေမှ နောက်တစ်ခါ ထပ်စစ်မယ်
+                task.wait(1)
+                processedItems[item] = nil
+            end)
         end
     end
     
-    -- Orphaned beams ရှင်းမယ်
+    -- ပစ္စည်းမရှိတော့ရင် Beam ရှင်းမယ်
     for model, _ in pairs(v4Beams) do
         if not model or not model.Parent or not model:IsDescendantOf(workspace) then
             removeV4Path(model)
@@ -105,4 +93,4 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Fuel Master: Backpack-Style Sync Loaded.")
+print("Fuel Master: No Collect Distance (Instant Pick) Loaded.")
