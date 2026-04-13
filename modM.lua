@@ -161,7 +161,7 @@ AddToggle("AutoCollect Fuel", "trackerv4.lua")
 AddToggle("Locate Crate", "trackerv5.lua")
 
 AddSection("NPC MENU")
-AddToggle("Evasion Bloater", "AutoEvasion.lua")
+AddToggle("Instant Kill", "kill.lua")
 AddToggle("HitBox Expander", "hitbox.lua")
 
 AddSection("SETTINGS MENU")
@@ -172,8 +172,7 @@ AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
     _G["noclip"] = false
     _G["jump"] = false
   
-    _G["AutoCollectFuel"] = false
-    _G["AutoEvasion"] = false
+    _G["kill"] = false
     _G["trackerv1"] = false
     _G["trackerv2"] = false
     _G["trackerv3"] = false
