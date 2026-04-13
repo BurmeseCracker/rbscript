@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (STRICT FORCE TELEPORT) ]] --
+-- [[ trackerv1.lua - Battery Master (FULL TELEPORT FORCE) ]] --
 local scriptID = "trackerv1" 
 
 if _G[scriptID] ~= true then
@@ -15,13 +15,14 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 100 
-local COLLECT_DIST = 100     
+local MAX_VISUAL_DIST = 500  -- ၅၀၀ အထိမြှင့်ထားမှ အဝေးကပစ္စည်းကို လှမ်းဖမ်းမိမှာပါ
+local COLLECT_DIST = 100     -- ၁၀၀ အကွာအဝေးရောက်ရင် Teleport စလုပ်မယ်
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
 local processed = {}
 
+-- [[ BEAM LOGIC ]] --
 local function removeV1Path(model)
     local data = v1Beams[model]
     if data then
@@ -43,7 +44,7 @@ local function createV1Path(model, root)
     local attB = Instance.new("Attachment", targetPart)
     local beam = Instance.new("Beam", root)
     beam.Attachment0, beam.Attachment1 = attP, attB
-    beam.Color = ColorSequence.new(Color3.fromRGB(255, 215, 0)) 
+    beam.Color = ColorSequence.new(Color3.fromRGB(255, 215, 0)) -- Yellow
     beam.Width0, beam.Width1 = 0.5, 0.5
     beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2; beam.FaceCamera = true
     v1Beams[model] = {beam = beam, aP = attP, aB = attB}
@@ -65,50 +66,59 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
-            local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
-            if not targetPart then continue end
+            -- Target Part ကို ပိုသေချာအောင်ရှာမယ်
+            local targetPart = item:IsA("Model") and (item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")) or item
+            if not targetPart or not targetPart:IsA("BasePart") then continue end
             
             local pos = targetPart.Position
             local dist = (root.Position - pos).Magnitude
 
+            -- 1. Visual Beam (Show up to 500 studs)
             if dist <= MAX_VISUAL_DIST then
                 createV1Path(item, root)
             else
                 removeV1Path(item)
             end
 
-            -- STRICT FORCE TELEPORT & COLLECTION
+            -- 2. Force Teleport & Collection
             if dist <= COLLECT_DIST then
                 processed[item] = true
+                print("Battery Found! Attempting Force Teleport...") -- Console (F9) မှာ စစ်လို့ရအောင်
 
                 task.spawn(function()
                     local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
                     
-                    -- ၁။ Loop ခံပြီး Teleport ကို Force လုပ်မယ် (Server ပြန်ဆွဲတာကို တားဖို့)
-                    -- ၀.၂ စက္ကန့်အတွင်းမှာ မူလနေရာပြန်ရောက်မသွားအောင် အတင်းချုပ်ထားတာပါ
+                    -- Teleport Loop (0.3s အထိ Server ကို Force လုပ်မယ်)
                     local startTime = tick()
-                    while tick() - startTime < 0.25 do
+                    while tick() - startTime < 0.3 do
                         root.CFrame = targetCFrame
-                        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Velocity reset
                         RunService.RenderStepped:Wait()
                     end
                     
-                    -- ၂။ ခုန်ခိုင်းမယ် (Physics refresh လုပ်ဖို့)
+                    -- Instant Jump (Force physics update)
                     hum:ChangeState(Enum.HumanoidStateType.Jumping)
                     
-                    -- ၃။ Remote ကို Fire လုပ်မယ်
+                    -- Remote Fire
                     AdjustRemote:FireServer(item)
                     
-                    -- ၄။ Cleanup
                     task.wait(0.2)
                     removeV1Path(item)
                     
                     task.wait(2.0) -- Cooldown
                     processed[item] = nil
+                    print("Battery Collected successfully.")
                 end)
             end
         end
     end
+    
+    -- Cleanup orphaned beams
+    for model, _ in pairs(v1Beams) do
+        if not model or not model.Parent or not model:IsDescendantOf(workspace) then
+            removeV1Path(model)
+        end
+    end
 end)
 
-print("Battery Master (Strict Force Teleport) Loaded.")
+print("Battery Master (Force TP + Range 500) Loaded.")
