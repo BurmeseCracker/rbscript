@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master DEBUGGED ]] --
+-- [[ trackerv4.lua - Fuel Master (FIXED COLLECTION) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -19,8 +19,8 @@ local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack"
 
 -- CONFIG
 local TRACK_DIST = 150    
-local COLLECT_DIST = 35   
-local TARGET_NAME = "Fuel" -- Exact name of the item in DroppedItems
+local COLLECT_DIST = 25   -- အကွာအဝေးကို နည်းနည်းလျှော့ထားတယ် (ပိုသေချာအောင်)
+local TARGET_NAME = "Fuel"
 
 local v4Beams = {}
 local processedItems = {}
@@ -40,7 +40,6 @@ end
 
 local function createV4Path(model, root)
     if v4Beams[model] then return end
-    -- Look for Union or any BasePart to attach the beam to
     local targetPart = model:FindFirstChild("Union") or model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
     if not targetPart then return end
 
@@ -49,10 +48,8 @@ local function createV4Path(model, root)
     local beam = Instance.new("Beam", root)
     beam.Attachment0, beam.Attachment1 = attP, attB
     beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) 
-    beam.Width0, beam.Width1 = 0.5, 0.5
-    beam.Texture = "rbxassetid://44611181"
-    beam.TextureSpeed = 2
-    beam.FaceCamera = true
+    beam.Width0, beam.Width1 = 0.4, 0.4
+    beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2; beam.FaceCamera = true
     v4Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
@@ -70,47 +67,47 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
     if not root then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-        -- FIX: Simplified name check to ensure it actually triggers
         if item.Name == TARGET_NAME and not processedItems[item] then
-            local targetPart = item:FindFirstChild("Union") or item:FindFirstChildWhichIsA("BasePart")
-            if not targetPart then continue end
-            
-            local dist = (root.Position - targetPart.Position).Magnitude
+            local pos = item:GetPivot().Position
+            local dist = (root.Position - pos).Magnitude
 
-            -- 1. TRACKING
+            -- Visual Beam
             if dist <= TRACK_DIST then
                 createV4Path(item, root)
             else
                 removeV4Path(item)
             end
 
-            -- 2. COLLECTION (The "Latch" fix)
+            -- Sync Collection Logic
             if dist <= COLLECT_DIST then
-                processedItems[item] = true -- Lock item so loop doesn't spam it
+                processedItems[item] = true
                 
                 task.spawn(function()
-                    -- Tell the server we are picking it up
+                    -- ၁။ အရင်ဆုံး PickUp လုပ်မယ်
                     PickUpRemote:FireServer(item)
-                    task.wait(0.1)
-                    AdjustRemote:FireServer(item)
                     
-                    -- Remove visual beam immediately after firing
+                    -- ၂။ ခဏစောင့်မယ် (Server က inventory ထဲထည့်တာ confirm ဖြစ်အောင်)
+                    task.wait(0.2) 
+                    
+                    -- ၃။ ပြီးမှ Backpack ကို update လုပ်မယ်
+                    AdjustRemote:FireServer() -- အချို့ game တွေမှာ parameter မလိုဘူး၊ ရှိသမျှ update လုပ်တာ
+                    
                     removeV4Path(item)
                     
-                    -- Wait before allowing this specific item to be tracked again
-                    task.wait(2) 
+                    -- ၄။ ပစ္စည်းတကယ်ပျောက်သွားလား စစ်မယ်
+                    task.wait(2)
                     processedItems[item] = nil
                 end)
             end
         end
     end
     
-    -- Cleanup for items that vanished or were taken by others
+    -- Cleanup
     for model, _ in pairs(v4Beams) do
-        if not model or not model.Parent then
+        if not model or not model.Parent or not model:IsDescendantOf(workspace) then
             removeV4Path(model)
         end
     end
 end)
 
-print("Fuel Master Fixed & Loaded.")
+print("Fuel Master: Collection Fixed Version Loaded.")
