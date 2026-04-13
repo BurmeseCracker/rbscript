@@ -3,8 +3,8 @@ local RunService = game:GetService("RunService")
 local player = game:GetService("Players").LocalPlayer
 
 -- CONFIGURATION
-local KILL_RANGE = 20 -- ၂၀ ပေအတွင်း အကုန်သေမယ်
-local ATTACK_SPEED = 0.2 -- တိုက်ခိုက်မယ့်အမြန်နှုန်း (စက္ကန့်)
+local KILL_RANGE = 50 -- ၂၀ ပေအတွင်း အကုန်သေမယ်
+local ATTACK_SPEED = 0.8 -- တိုက်ခိုက်မယ့်အမြန်နှုန်း (စက္ကန့်)
 
 local lastAttack = 0
 
