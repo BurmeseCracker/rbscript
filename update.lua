@@ -1,92 +1,54 @@
--- [[ update.lua - Dynamic Announcement Splash ]] --
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 
--- CONFIG: Change this to your raw txt link!
-local TEXT_URL = "https://raw.githubusercontent.com/BurmeseCracker/rbscript/refs/heads/main/update.txt"
+-- CONFIG: This pulls your text dynamically
+local TXT_URL = "https://raw.githubusercontent.com/BurmeseCracker/rbscript/refs/heads/main/update.txt"
 
--- Loader Variable
-_G.UpdateClosed = false
+-- Fetch the text from your .txt file
+local success, updateNote = pcall(function() return game:HttpGet(TXT_URL) end)
+updateNote = success and updateNote or "No update notes found."
 
--- Get Update Text from GitHub
-local success, updateText = pcall(function()
-    return game:HttpGet(TEXT_URL)
-end)
-
-if not success or not updateText then
-    updateText = "Failed to load update notes.\nPlease check your connection."
-end
-
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AnnouncementSplash"
-screenGui.Parent = CoreGui
+local screenGui = Instance.new("ScreenGui", CoreGui)
 screenGui.IgnoreGuiInset = true
 
--- Main Frame
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 320, 0, 220) -- Slightly taller for more text
-mainFrame.Position = UDim2.new(0.5, -160, 0.4, -110)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-mainFrame.Parent = screenGui
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
+local main = Instance.new("Frame", screenGui)
+main.Size = UDim2.new(0, 320, 0, 260)
+main.Position = UDim2.new(0.5, -160, 0.5, -130)
+main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 15)
 
--- Top Bar
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 45)
-title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-title.Text = "What's New?"
+local title = Instance.new("TextLabel", main)
+title.Size = UDim2.new(1, 0, 0, 50)
+title.Text = "LOG UPDATES"
 title.TextColor3 = Color3.fromRGB(255, 215, 0)
-title.TextSize = 20
 title.Font = Enum.Font.GothamBold
-title.Parent = mainFrame
-Instance.new("UICorner", title).CornerRadius = UDim.new(0, 12)
+title.TextSize = 20
+title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Instance.new("UICorner", title).CornerRadius = UDim.new(0, 15)
 
--- Content Area (Now uses the fetched updateText)
-local content = Instance.new("TextLabel")
-content.Size = UDim2.new(1, -30, 1, -100)
-content.Position = UDim2.new(0, 15, 0, 60)
-content.BackgroundTransparency = 1
-content.Text = updateText -- <--- DYNAMIC TEXT HERE
-content.TextColor3 = Color3.fromRGB(240, 240, 240)
-content.TextSize = 14
-content.Font = Enum.Font.GothamMedium
-content.TextXAlignment = Enum.TextXAlignment.Left
-content.TextYAlignment = Enum.TextYAlignment.Top
-content.TextWrapped = true
-content.Parent = mainFrame
+local body = Instance.new("TextLabel", main)
+body.Size = UDim2.new(1, -30, 0, 120)
+body.Position = UDim2.new(0, 15, 0, 65)
+body.Text = updateNote -- This is the text from your update.txt!
+body.TextColor3 = Color3.new(1, 1, 1)
+body.TextSize = 15
+body.Font = Enum.Font.Gotham
+body.TextXAlignment = Enum.TextXAlignment.Left
+body.TextYAlignment = Enum.TextYAlignment.Top
+body.TextWrapped = true
+body.BackgroundTransparency = 1
 
+local btn = Instance.new("TextButton", main)
+btn.Size = UDim2.new(0, 240, 0, 50)
+btn.Position = UDim2.new(0.5, -120, 1, -65)
+btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+btn.Text = "GOT IT!"
+btn.Font = Enum.Font.GothamBold
+btn.TextSize = 18
+btn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 12)
 
--- Close Button
-local closeBtn = Instance.new("TextButton")
-closeBtn.Name = "CloseButton"
-closeBtn.Size = UDim2.new(0, 220, 0, 50) -- BIG SIZE
-closeBtn.Position = UDim2.new(0.5, -110, 1, -60) -- CENTERED
-closeBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-closeBtn.Text = "GOT IT!" -- All caps looks better on big buttons
-closeBtn.TextColor3 = Color3.new(1, 1, 1)
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 20 -- BIG TEXT
-closeBtn.Parent = mainFrame
-
-local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(0, 10)
-btnCorner.Parent = closeBtn
-
--- Animation Logic
-mainFrame.GroupTransparency = 1 -- If you have a CanvasGroup, otherwise fade manually
-local function fade(trans)
-    local info = TweenInfo.new(0.5)
-    TweenService:Create(mainFrame, info, {BackgroundTransparency = trans}):Play()
-    TweenService:Create(title, info, {BackgroundTransparency = trans, TextTransparency = trans}):Play()
-    TweenService:Create(content, info, {TextTransparency = trans}):Play()
-    TweenService:Create(closeBtn, info, {BackgroundTransparency = trans, TextTransparency = trans}):Play()
-end
-
-fade(0)
-
-closeBtn.MouseButton1Click:Connect(function()
+btn.MouseButton1Click:Connect(function()
     _G.UpdateClosed = true
-    fade(1)
-    task.wait(0.5)
     screenGui:Destroy()
 end)
