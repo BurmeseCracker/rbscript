@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (STRICT FORCE TELEPORT) ]] --
+-- [[ trackerv1.lua - Battery Master (SMART PROGRESSIVE TP) ]] --
 local scriptID = "trackerv1" 
 
 if _G[scriptID] ~= true then
@@ -15,8 +15,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 100 
-local COLLECT_DIST = 60     
+local MAX_VISUAL_DIST = 500
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
@@ -63,52 +62,61 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
     local hum = char and char:FindFirstChild("Humanoid")
     if not root or not hum then return end
 
+    -- အနားကပစ္စည်းကို အရင်ရှာဖို့အတွက် ပစ္စည်းစာရင်းကို အကွာအဝေးအလိုက် စီမယ်
+    local itemsInRange = {}
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
-            local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
-            if not targetPart then continue end
-            
-            local pos = targetPart.Position
-            local dist = (root.Position - pos).Magnitude
-
-            if dist <= MAX_VISUAL_DIST then
-                createV1Path(item, root)
-            else
-                removeV1Path(item)
-            end
-
-            -- STRICT FORCE TELEPORT & COLLECTION
-            if dist <= COLLECT_DIST then
-                processed[item] = true
-
-                task.spawn(function()
-                    local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
-                    
-                    -- ၁။ Loop ခံပြီး Teleport ကို Force လုပ်မယ် (Server ပြန်ဆွဲတာကို တားဖို့)
-                    -- ၀.၂ စက္ကန့်အတွင်းမှာ မူလနေရာပြန်ရောက်မသွားအောင် အတင်းချုပ်ထားတာပါ
-                    local startTime = tick()
-                    while tick() - startTime < 3 do
-                        root.CFrame = targetCFrame
-                        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                        RunService.RenderStepped:Wait()
-                    end
-                    
-                    -- ၂။ ခုန်ခိုင်းမယ် (Physics refresh လုပ်ဖို့)
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                    
-                    -- ၃။ Remote ကို Fire လုပ်မယ်
-                    AdjustRemote:FireServer(item)
-                    
-                    -- ၄။ Cleanup
-                    task.wait(0.2)
-                    removeV1Path(item)
-                    
-                    task.wait(2.0) -- Cooldown
-                    processed[item] = nil
-                end)
+            local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")
+            if targetPart then
+                local dist = (root.Position - targetPart.Position).Magnitude
+                if dist <= 200 then -- Max limit 200
+                    table.insert(itemsInRange, {item = item, dist = dist, pos = targetPart.Position})
+                end
+                
+                -- Visual Beam (500 studs အထိပြမယ်)
+                if dist <= MAX_VISUAL_DIST then createV1Path(item, root) end
             end
         end
     end
+
+    -- အနီးဆုံးပစ္စည်းကို အပေါ်ဆုံးရောက်အောင် စီလိုက်တာ (Sorting)
+    table.sort(itemsInRange, function(a, b) return a.dist < b.dist end)
+
+    -- ပစ္စည်းရှိရင် အနီးဆုံးတစ်ခုကိုပဲ Teleport အရင်လုပ်မယ်
+    local targetData = itemsInRange[1]
+    if targetData then
+        local item = targetData.item
+        local pos = targetData.pos
+        local currentDist = targetData.dist
+
+        -- ပထမဆုံး 40 အတွင်းရှိတာကို အရင်ကောက်မယ်၊ ပြီးမှ 200 အထိ တိုးသွားမယ်
+        -- (Sorting လုပ်ထားတဲ့အတွက် 40 ထဲမှာရှိနေရင် သူက နံပါတ် ၁ အနေနဲ့ အရင်ပါလာမှာပါ)
+        processed[item] = true
+        
+        task.spawn(function()
+            local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+            local startTime = tick()
+            
+            -- Force Loop 10 seconds (Auto-break ပါမယ်)
+            while tick() - startTime < 10 do
+                if not item or not item.Parent then break end
+                
+                root.CFrame = targetCFrame
+                root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                
+                if tick() - startTime < 0.1 then
+                    AdjustRemote:FireServer(item)
+                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+                RunService.RenderStepped:Wait()
+            end
+            
+            task.wait(0.2)
+            removeV1Path(item)
+            task.wait(1.5) -- Priority collection အတွက် cooldown နည်းနည်းလျှော့ပေးထားတယ်
+            processed[item] = nil
+        end)
+    end
 end)
 
-print("Battery Master (Strict Force Teleport) Loaded.")
+print("Battery Master (Smart Priority 40-200) Loaded.")
