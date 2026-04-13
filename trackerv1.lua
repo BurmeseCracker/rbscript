@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (RANGE COLLECT + BEAMS) ]] --
+-- [[ trackerv1.lua - Battery Master (BACKPACK SYNC FIXED) ]] --
 local scriptID = "trackerv1" 
 
 -- Wait for Menu Toggle
@@ -14,12 +14,11 @@ local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
 -- Remotes
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 150 -- Distance to see yellow beams
-local COLLECT_DIST = 35     -- ONLY collect if within this distance
+local MAX_VISUAL_DIST = 150 -- Beam မြင်ရမယ့် အကွာအဝေး
+local COLLECT_DIST = 30     -- အနားရောက်မှ ကောက်မယ့် အကွာအဝေး
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
@@ -71,34 +70,38 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             local pos = item:GetPivot().Position
             local dist = (root.Position - pos).Magnitude
 
-            -- 1. SHOW BEAMS (Visual only)
+            -- 1. SHOW BEAMS (Visual Only)
             if dist <= MAX_VISUAL_DIST then
                 createV1Path(item, root)
             else
                 removeV1Path(item)
             end
 
-            -- 2. RANGE COLLECTION
-            -- Only triggers if you walk within COLLECT_DIST
+            -- 2. BACKPACK SYNC COLLECTION
+            -- အရင်ကလို PickUpRemote မသုံးတော့ဘဲ Backpack logic အတိုင်း တိုက်ရိုက်သိမ်းမယ်
             if dist <= COLLECT_DIST then
                 processed[item] = true
 
                 task.spawn(function()
-                    task.wait(0.1) -- Required server delay
-                    
-                    -- Instant Sync Fire
-                    PickUpRemote:FireServer(item)
+                    -- Server ဆီကို item model တိုက်ရိုက်ပို့ပြီး သိမ်းခိုင်းမယ်
                     AdjustRemote:FireServer(item)
                     
                     task.wait(0.2)
                     removeV1Path(item)
                     
-                    task.wait(2.5) -- Cooldown
+                    task.wait(1.5) -- Cooldown နည်းနည်းလျှော့ထားတယ်
                     processed[item] = nil
                 end)
             end
         end
     end
+    
+    -- Orphaned beams ရှင်းမယ် (ပစ္စည်းပျောက်သွားရင် beam ဖျက်မယ်)
+    for model, _ in pairs(v1Beams) do
+        if not model or not model.Parent or not model:IsDescendantOf(workspace) then
+            removeV1Path(model)
+        end
+    end
 end)
 
-print("Battery Master (Range: " .. COLLECT_DIST .. ") Loaded.")
+print("Battery Master (Backpack Sync Mode) Loaded.")
