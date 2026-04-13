@@ -1,7 +1,9 @@
--- [[ trackerv1.lua - Battery Master (FIXED SYNC) ]] --
+-- [[ trackerv1.lua - Battery Master (SMART PROGRESSIVE TP + RETURN) ]] --
 local scriptID = "trackerv1" 
 
--- REMOVED THE REPEAT LOOP TO PREVENT CRASHING/FREEZING --
+if _G[scriptID] ~= true then
+    repeat task.wait(0.5) until _G[scriptID] == true
+end
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -13,8 +15,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local TRACK_DIST = 100    
-local COLLECT_DIST = 40   
+local MAX_VISUAL_DIST = 100
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
@@ -51,7 +52,6 @@ end
 if _G.BatteryMasterLoop then _G.BatteryMasterLoop:Disconnect() end
 
 _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
-    -- Check global variable from Menu
     if _G[scriptID] ~= true then 
         for model, _ in pairs(v1Beams) do removeV1Path(model) end
         return 
@@ -59,42 +59,64 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    local hum = char and char:FindFirstChild("Humanoid")
+    if not root or not hum then return end
 
+    local itemsInRange = {}
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
             local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")
             if targetPart then
                 local dist = (root.Position - targetPart.Position).Magnitude
+                if dist <= 40 then 
+                    table.insert(itemsInRange, {item = item, dist = dist, pos = targetPart.Position})
+                end
                 
-                -- Visual Beam
-                if dist <= TRACK_DIST then
-                    createV1Path(item, root)
-                else
-                    removeV1Path(item)
-                end
-
-                -- Collection Logic (Bring)
-                if dist <= COLLECT_DIST then
-                    processed[item] = true
-                    task.spawn(function()
-                        local startTime = tick()
-                        while tick() - startTime < 1 do
-                            if not item or not item.Parent or not targetPart then break end
-                            targetPart.CFrame = root.CFrame * CFrame.new(0, 0, -2)
-                            if tick() - startTime < 0.1 then
-                                AdjustRemote:FireServer(item)
-                            end
-                            RunService.RenderStepped:Wait()
-                        end
-                        removeV1Path(item)
-                        task.wait(1)
-                        processed[item] = nil
-                    end)
-                end
+                if dist <= MAX_VISUAL_DIST then createV1Path(item, root) end
             end
         end
     end
+
+    table.sort(itemsInRange, function(a, b) return a.dist < b.dist end)
+
+    local targetData = itemsInRange[1]
+    if targetData then
+        local item = targetData.item
+        local pos = targetData.pos
+        
+        -- [[ GET BACK TO ORIGINAL PLACE LOGIC START ]] --
+        local originalPos = root.CFrame -- Save your current location before TP
+        -- [[ GET BACK TO ORIGINAL PLACE LOGIC END ]] --
+
+        processed[item] = true
+        
+        task.spawn(function()
+            local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+            local startTime = tick()
+            
+            while tick() - startTime < 1 do
+                if not item or not item.Parent then break end
+                
+                root.CFrame = targetCFrame
+                root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                
+                if tick() - startTime < 0.1 then
+                    AdjustRemote:FireServer(item)
+                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+                RunService.RenderStepped:Wait()
+            end
+            
+            -- [[ RETURN TO ORIGINAL POSITION ]] --
+            root.CFrame = originalPos
+            -- [[ RETURN TO ORIGINAL POSITION ]] --
+
+            task.wait(0.2)
+            removeV1Path(item)
+            task.wait(1.5) 
+            processed[item] = nil
+        end)
+    end
 end)
 
-print("Battery Master: Sync Fixed & Loaded.")
+print("Battery Master (Smart Priority 40-200 + Auto Return) Loaded.")
