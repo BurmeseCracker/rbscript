@@ -1,9 +1,7 @@
--- [[ trackerv2.lua - Scrap Master (COLLECT + AUTO-HIT - NO BRING) ]] --
+-- [[ trackerv2.lua - Scrap Master (FIXED SYNC & DISABLE) ]] --
 local scriptID = "trackerv2" 
 
-if _G[scriptID] ~= true then
-    repeat task.wait(0.5) until _G[scriptID] == true
-end
+-- REMOVED THE REPEAT LOOP TO FIX THE DISABLE BUG
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -19,8 +17,8 @@ local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack"
 
 -- Config
 local TRACK_DIST = 100    
-local COLLECT_DIST = 15    -- Distance to pick up (Must be close)
-local ATTACK_RANGE = 40    -- Distance to hit piles
+local COLLECT_DIST = 15    
+local ATTACK_RANGE = 40    
 local SWING_COOLDOWN = 0.1
 local lastSwing = 0
 
@@ -44,7 +42,9 @@ local function removePath(model)
 end
 
 local function clearAllBeams()
-    for model, _ in pairs(activeBeams) do removePath(model) end
+    for model, _ in pairs(activeBeams) do 
+        removePath(model) 
+    end
 end
 
 local function createPath(model, root, color)
@@ -66,6 +66,7 @@ end
 if _G.ScrapMasterLoop then _G.ScrapMasterLoop:Disconnect() end
 
 _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
+    -- IF MENU IS OFF, THIS NOW RUNS IMMEDIATELY
     if _G[scriptID] ~= true then 
         clearAllBeams()
         return 
@@ -76,7 +77,7 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     local tool = char and char:FindFirstChildOfClass("Tool")
     if not root then return end
 
-    -- 1. AUTO-HIT SCRAP PILES (CYAN BEAM)
+    -- 1. AUTO-HIT SCRAP PILES
     local targets = {}
     local canHit = false
     
@@ -110,7 +111,7 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
 
-    -- 2. TRACK & COLLECT DROPPED SCRAP (WHITE BEAM)
+    -- 2. TRACK & COLLECT DROPPED SCRAP
     for _, item in pairs(DROP_FOLDER:GetChildren()) do
         if item.Name == ITEM_NAME and not processedItems[item] then
             local itemPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
@@ -123,14 +124,11 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
                     removePath(item)
                 end
 
-                -- Simple Collection (No Bring)
                 if dist <= COLLECT_DIST then
                     processedItems[item] = true
                     task.spawn(function()
-                        -- Fire remotes directly
                         PickUpRemote:FireServer(item)
                         AdjustRemote:FireServer(item)
-                        
                         task.wait(0.2)
                         removePath(item)
                         task.wait(1)
@@ -146,4 +144,4 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Scrap Master V2: Traditional Mode (No Bring) Loaded.")
+print("Scrap Master V2: Sync Fixed & Fully Disablable.")
