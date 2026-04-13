@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (SMART PROGRESSIVE TP) ]] --
+-- [[ trackerv1.lua - Battery Master (SMART PROGRESSIVE TP + RETURN) ]] --
 local scriptID = "trackerv1" 
 
 if _G[scriptID] ~= true then
@@ -62,42 +62,38 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
     local hum = char and char:FindFirstChild("Humanoid")
     if not root or not hum then return end
 
-    -- အနားကပစ္စည်းကို အရင်ရှာဖို့အတွက် ပစ္စည်းစာရင်းကို အကွာအဝေးအလိုက် စီမယ်
     local itemsInRange = {}
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
             local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")
             if targetPart then
                 local dist = (root.Position - targetPart.Position).Magnitude
-                if dist <= 40 then -- Max limit 200
+                if dist <= 40 then 
                     table.insert(itemsInRange, {item = item, dist = dist, pos = targetPart.Position})
                 end
                 
-                -- Visual Beam (500 studs အထိပြမယ်)
                 if dist <= MAX_VISUAL_DIST then createV1Path(item, root) end
             end
         end
     end
 
-    -- အနီးဆုံးပစ္စည်းကို အပေါ်ဆုံးရောက်အောင် စီလိုက်တာ (Sorting)
     table.sort(itemsInRange, function(a, b) return a.dist < b.dist end)
 
-    -- ပစ္စည်းရှိရင် အနီးဆုံးတစ်ခုကိုပဲ Teleport အရင်လုပ်မယ်
     local targetData = itemsInRange[1]
     if targetData then
         local item = targetData.item
         local pos = targetData.pos
-        local currentDist = targetData.dist
+        
+        -- [[ GET BACK TO ORIGINAL PLACE LOGIC START ]] --
+        local originalPos = root.CFrame -- Save your current location before TP
+        -- [[ GET BACK TO ORIGINAL PLACE LOGIC END ]] --
 
-        -- ပထမဆုံး 40 အတွင်းရှိတာကို အရင်ကောက်မယ်၊ ပြီးမှ 200 အထိ တိုးသွားမယ်
-        -- (Sorting လုပ်ထားတဲ့အတွက် 40 ထဲမှာရှိနေရင် သူက နံပါတ် ၁ အနေနဲ့ အရင်ပါလာမှာပါ)
         processed[item] = true
         
         task.spawn(function()
             local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
             local startTime = tick()
             
-            -- Force Loop 10 seconds (Auto-break ပါမယ်)
             while tick() - startTime < 2 do
                 if not item or not item.Parent then break end
                 
@@ -111,12 +107,16 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
                 RunService.RenderStepped:Wait()
             end
             
+            -- [[ RETURN TO ORIGINAL POSITION ]] --
+            root.CFrame = originalPos
+            -- [[ RETURN TO ORIGINAL POSITION ]] --
+
             task.wait(0.2)
             removeV1Path(item)
-            task.wait(1.5) -- Priority collection အတွက် cooldown နည်းနည်းလျှော့ပေးထားတယ်
+            task.wait(1.5) 
             processed[item] = nil
         end)
     end
 end)
 
-print("Battery Master (Smart Priority 40-200) Loaded.")
+print("Battery Master (Smart Priority 40-200 + Auto Return) Loaded.")
