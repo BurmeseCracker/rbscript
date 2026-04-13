@@ -15,8 +15,8 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local TRACK_DIST = 300    -- ပစ္စည်းကို အနီရောင်တန်းလေးနဲ့ လှမ်းမြင်ရမယ့် အကွာအဝေး
-local COLLECT_DIST = 30   -- ပစ္စည်းကို တကယ်ကောက်မယ့် အကွာအဝေး (အနားရောက်မှကောက်မယ်)
+local TRACK_DIST = 100    -- ပစ္စည်းကို အနီရောင်တန်းလေးနဲ့ လှမ်းမြင်ရမယ့် အကွာအဝေး
+local COLLECT_DIST = 60   -- ပစ္စည်းကို တကယ်ကောက်မယ့် အကွာအဝေး (အနားရောက်မှကောက်မယ်)
 local TARGET_NAME = "Fuel"
 
 local v4Beams = {}
