@@ -1,7 +1,5 @@
--- [[ trackerv2.lua - Scrap Master (FIXED SYNC & DISABLE) ]] --
+-- [[ trackerv2.lua - Scrap Master (CYAN BEAMS ONLY) ]] --
 local scriptID = "trackerv2" 
-
--- REMOVED THE REPEAT LOOP TO FIX THE DISABLE BUG
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -66,7 +64,6 @@ end
 if _G.ScrapMasterLoop then _G.ScrapMasterLoop:Disconnect() end
 
 _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
-    -- IF MENU IS OFF, THIS NOW RUNS IMMEDIATELY
     if _G[scriptID] ~= true then 
         clearAllBeams()
         return 
@@ -77,7 +74,7 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     local tool = char and char:FindFirstChildOfClass("Tool")
     if not root then return end
 
-    -- 1. AUTO-HIT SCRAP PILES
+    -- 1. TRACK & AUTO-HIT SCRAP PILES (CYAN BEAM ONLY)
     local targets = {}
     local canHit = false
     
@@ -88,7 +85,7 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
                 local dist = (root.Position - pilePart.Position).Magnitude
                 
                 if dist <= TRACK_DIST then
-                    createPath(pile, root, Color3.fromRGB(0, 255, 255))
+                    createPath(pile, root, Color3.fromRGB(0, 255, 255)) -- Cyan
                 else
                     removePath(pile)
                 end
@@ -111,26 +108,20 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
 
-    -- 2. TRACK & COLLECT DROPPED SCRAP
+    -- 2. SILENT COLLECT DROPPED SCRAP (NO BEAM)
     for _, item in pairs(DROP_FOLDER:GetChildren()) do
         if item.Name == ITEM_NAME and not processedItems[item] then
             local itemPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
             if itemPart then
                 local dist = (root.Position - itemPart.Position).Magnitude
 
-                if dist <= TRACK_DIST then
-                    createPath(item, root, Color3.fromRGB(255, 255, 255))
-                else
-                    removePath(item)
-                end
-
+                -- Removed the createPath logic for white beams here
+                
                 if dist <= COLLECT_DIST then
                     processedItems[item] = true
                     task.spawn(function()
                         PickUpRemote:FireServer(item)
                         AdjustRemote:FireServer(item)
-                        task.wait(0.2)
-                        removePath(item)
                         task.wait(1)
                         processedItems[item] = nil
                     end)
@@ -139,9 +130,10 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
     
+    -- Cleanup orphaned beams
     for model, _ in pairs(activeBeams) do
         if not model or not model.Parent then removePath(model) end
     end
 end)
 
-print("Scrap Master V2: Sync Fixed & Fully Disablable.")
+print("Scrap Master V2: Cyan Beams Only Enabled.")
