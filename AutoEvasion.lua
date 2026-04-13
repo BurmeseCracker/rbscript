@@ -1,58 +1,66 @@
--- [[ Full Auto Kill Aura - Swing + HitTargets ]] --
+-- [[ Universal Layered Aura - Multi-Tool Version ]] --
 local RunService = game:GetService("RunService")
-local player = game:GetService("Players").LocalPlayer
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
 
--- CONFIGURATION
-local KILL_RANGE = 50 -- ၂၀ ပေအတွင်း အကုန်သေမယ်
-local ATTACK_SPEED = 0.8 -- တိုက်ခိုက်မယ့်အမြန်နှုန်း (စက္ကန့်)
-
-local lastAttack = 0
+-- Configuration
+local ATTACK_RANGE = 40
+local SWING_COOLDOWN = 0.1 -- Prevents crashing/kicks
+local lastSwing = 0
 
 RunService.Heartbeat:Connect(function()
-    -- Attack Speed အတွက် ခဏစောင့်မယ် (Anti-Cheat ကန်ထုတ်တာမျိုးမဖြစ်အောင်)
-    if tick() - lastAttack < ATTACK_SPEED then return end
-    
     local char = player.Character
     if not char then return end
     
-    -- လက်ထဲမှာ Bat ရှိမရှိ စစ်မယ်
-    local bat = char:FindFirstChild("Bat")
-    if not bat then return end
+    -- Find ANY tool currently equipped
+    local tool = char:FindFirstChildOfClass("Tool")
+    if not tool then return end
     
-    local swingRemote = bat:FindFirstChild("Swing")
-    local hitRemote = bat:FindFirstChild("HitTargets")
+    -- Look for the attack remotes inside the held tool
+    local swingRemote = tool:FindFirstChild("Swing")
+    local hitRemote = tool:FindFirstChild("HitTargets")
+    
+    -- Characters folder check
     local charactersFolder = workspace:FindFirstChild("Characters")
-    
     if not (swingRemote and hitRemote and charactersFolder) then return end
 
-    local targetFound = false
+    -- Rate limiting to prevent server lag
+    if tick() - lastSwing < SWING_COOLDOWN then return end
 
-    -- အနားက Zombie တွေကို ရှာမယ်
-    for _, zombie in pairs(charactersFolder:GetChildren()) do
-        if zombie:IsA("Model") and zombie ~= char then
-            local root = zombie:FindFirstChild("HumanoidRootPart")
-            local hum = zombie:FindFirstChildOfClass("Humanoid")
+    local myPos = char.PrimaryPart and char.PrimaryPart.Position
+    if not myPos then return end
+
+    local targets = {}
+    local hitAny = false
+
+    for _, enemy in pairs(charactersFolder:GetChildren()) do
+        if enemy:IsA("Model") and enemy ~= char then
+            local root = enemy:FindFirstChild("HumanoidRootPart")
+            local hum = enemy:FindFirstChildOfClass("Humanoid")
             
             if root and hum and hum.Health > 0 then
-                local dist = (char.HumanoidRootPart.Position - root.Position).Magnitude
+                local dist = (myPos - root.Position).Magnitude
                 
-                -- ၂၀ ပေအတွင်းရှိရင်
-                if dist <= KILL_RANGE then
-                    targetFound = true
+                if dist <= ATTACK_RANGE then
+                    table.insert(targets, enemy)
+                    hitAny = true
                     
-                    -- ၁။ Hit Signal ပို့မယ်
-                    local args = {{ zombie }}
-                    hitRemote:FireServer(unpack(args))
+                    -- Damage Trigger
+                    hitRemote:FireServer(targets)
+                    
+                    -- Extra speed for close combat
+                    if dist <= 12 then
+                        swingRemote:FireServer()
+                    end
                 end
             end
         end
     end
     
-    -- တကယ်လို့ အနားမှာ Zombie ရှိရင် Swing (ဝှေ့ယမ်းတာ) ကို တစ်ခါတည်းလုပ်မယ်
-    if targetFound then
+    if hitAny then
         swingRemote:FireServer()
-        lastAttack = tick()
+        lastSwing = tick()
     end
 end)
 
-print("Full Auto Aura: ACTIVE. Just equip your Bat and stand near zombies!")
+print("Universal Aura Loaded: Compatible with all Melee tools.")
