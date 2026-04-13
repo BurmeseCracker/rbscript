@@ -1,4 +1,4 @@
--- [[ trackerv2.lua - Scrap Master (CYAN BEAMS ONLY) ]] --
+-- [[ trackerv2.lua - Scrap Master (FIXED DISABLE & CYAN ONLY) ]] --
 local scriptID = "trackerv2" 
 
 local Players = game:GetService("Players")
@@ -64,6 +64,7 @@ end
 if _G.ScrapMasterLoop then _G.ScrapMasterLoop:Disconnect() end
 
 _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
+    -- MENU OFF ဖြစ်သွားရင် BEAM အကုန်ဖျက်ပြီး LOOP ကို ရပ်ပစ်မယ်
     if _G[scriptID] ~= true then 
         clearAllBeams()
         return 
@@ -115,8 +116,6 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
             if itemPart then
                 local dist = (root.Position - itemPart.Position).Magnitude
 
-                -- Removed the createPath logic for white beams here
-                
                 if dist <= COLLECT_DIST then
                     processedItems[item] = true
                     task.spawn(function()
@@ -130,10 +129,10 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
     
-    -- Cleanup orphaned beams
+    -- Orphaned beam cleanup
     for model, _ in pairs(activeBeams) do
         if not model or not model.Parent then removePath(model) end
     end
 end)
 
-print("Scrap Master V2: Cyan Beams Only Enabled.")
+print("Scrap Master V2 Fixed: Cyan Only & Quick Disable.")
