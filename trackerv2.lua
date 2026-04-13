@@ -1,4 +1,4 @@
--- [[ trackerv2.lua - Scrap Master (COLLECT + AUTO-HIT PILES) ]] --
+-- [[ trackerv2.lua - Scrap Master (COLLECT + AUTO-HIT - NO BRING) ]] --
 local scriptID = "trackerv2" 
 
 if _G[scriptID] ~= true then
@@ -19,9 +19,9 @@ local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack"
 
 -- Config
 local TRACK_DIST = 100    
-local COLLECT_DIST = 40    -- Bring distance
-local ATTACK_RANGE = 40    -- Hit distance
-local SWING_COOLDOWN = 0.2 
+local COLLECT_DIST = 15    -- Distance to pick up (Must be close)
+local ATTACK_RANGE = 40    -- Distance to hit piles
+local SWING_COOLDOWN = 0.1
 local lastSwing = 0
 
 local ITEM_NAME = "Scrap"
@@ -86,14 +86,12 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
             if pilePart then
                 local dist = (root.Position - pilePart.Position).Magnitude
                 
-                -- Visual Path
                 if dist <= TRACK_DIST then
                     createPath(pile, root, Color3.fromRGB(0, 255, 255))
                 else
                     removePath(pile)
                 end
 
-                -- Hit Detection
                 if dist <= ATTACK_RANGE then
                     table.insert(targets, pile)
                     canHit = true
@@ -102,7 +100,6 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
 
-    -- Execute Hit if tool is equipped and cooldown is over
     if canHit and tool and tick() - lastSwing >= SWING_COOLDOWN then
         local hitRemote = tool:FindFirstChild("HitTargets")
         local swingRemote = tool:FindFirstChild("Swing")
@@ -113,7 +110,7 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
 
-    -- 2. TRACK & BRING DROPPED SCRAP (WHITE BEAM)
+    -- 2. TRACK & COLLECT DROPPED SCRAP (WHITE BEAM)
     for _, item in pairs(DROP_FOLDER:GetChildren()) do
         if item.Name == ITEM_NAME and not processedItems[item] then
             local itemPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
@@ -126,24 +123,17 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
                     removePath(item)
                 end
 
-                -- Bring and Collect
+                -- Simple Collection (No Bring)
                 if dist <= COLLECT_DIST then
                     processedItems[item] = true
                     task.spawn(function()
-                        local startTime = tick()
-                        while tick() - startTime < 1 do
-                            if not item or not item.Parent or not itemPart then break end
-                            -- Bring item to you
-                            itemPart.CFrame = root.CFrame * CFrame.new(0, 0, -2)
-                            -- Remote fire
-                            if tick() - startTime < 0.1 then
-                                PickUpRemote:FireServer(item)
-                                AdjustRemote:FireServer(item)
-                            end
-                            RunService.RenderStepped:Wait()
-                        end
+                        -- Fire remotes directly
+                        PickUpRemote:FireServer(item)
+                        AdjustRemote:FireServer(item)
+                        
+                        task.wait(0.2)
                         removePath(item)
-                        task.wait(1.5)
+                        task.wait(1)
                         processedItems[item] = nil
                     end)
                 end
@@ -151,10 +141,9 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
     
-    -- Cleanup
     for model, _ in pairs(activeBeams) do
         if not model or not model.Parent then removePath(model) end
     end
 end)
 
-print("Scrap Master V2: Auto-Hit + Bring Loaded.")
+print("Scrap Master V2: Traditional Mode (No Bring) Loaded.")
