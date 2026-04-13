@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (TELEPORT + INSTANT JUMP) ]] --
+-- [[ trackerv1.lua - Battery Master (STRICT FORCE TELEPORT) ]] --
 local scriptID = "trackerv1" 
 
 if _G[scriptID] ~= true then
@@ -77,26 +77,29 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
                 removeV1Path(item)
             end
 
-            -- TELEPORT + INSTANT JUMP + COLLECTION
+            -- STRICT FORCE TELEPORT & COLLECTION
             if dist <= COLLECT_DIST then
                 processed[item] = true
 
                 task.spawn(function()
-                    -- ၁။ Velocity ကို ဖြတ်မယ်
-                    root.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                    local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
                     
-                    -- ၂။ Teleport လုပ်မယ် (ပစ္စည်းရဲ့ အပေါ်တည့်တည့်ကို)
-                    root.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
+                    -- ၁။ Loop ခံပြီး Teleport ကို Force လုပ်မယ် (Server ပြန်ဆွဲတာကို တားဖို့)
+                    -- ၀.၂ စက္ကန့်အတွင်းမှာ မူလနေရာပြန်ရောက်မသွားအောင် အတင်းချုပ်ထားတာပါ
+                    local startTime = tick()
+                    while tick() - startTime < 0.25 do
+                        root.CFrame = targetCFrame
+                        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        RunService.RenderStepped:Wait()
+                    end
                     
-                    -- ၃။ INSTANT JUMP (ခုန်ခိုင်းမယ်)
-                    -- Server က Position အသစ်ကို လက်ခံသွားအောင် Force Jump လုပ်တာပါ
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping) 
+                    -- ၂။ ခုန်ခိုင်းမယ် (Physics refresh လုပ်ဖို့)
+                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
                     
-                    task.wait(0.1) -- Physics Update စောင့်ချိန်
-                    
-                    -- ၄။ ပစ္စည်းကို သိမ်းမယ်
+                    -- ၃။ Remote ကို Fire လုပ်မယ်
                     AdjustRemote:FireServer(item)
                     
+                    -- ၄။ Cleanup
                     task.wait(0.2)
                     removeV1Path(item)
                     
@@ -108,4 +111,4 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Battery Master (Teleport + Instant Jump) Loaded.")
+print("Battery Master (Strict Force Teleport) Loaded.")
