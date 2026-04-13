@@ -15,7 +15,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 500
+local MAX_VISUAL_DIST = 100
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
@@ -69,7 +69,7 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")
             if targetPart then
                 local dist = (root.Position - targetPart.Position).Magnitude
-                if dist <= 200 then -- Max limit 200
+                if dist <= 40 then -- Max limit 200
                     table.insert(itemsInRange, {item = item, dist = dist, pos = targetPart.Position})
                 end
                 
