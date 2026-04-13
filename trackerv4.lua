@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (FIXED COLLECTION) ]] --
+-- [[ trackerv4.lua - Fuel Master (BACKPACK SYNC FIXED) ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -11,15 +11,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
-
--- Remotes
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
+-- Backpack script ထဲက logic အတိုင်း remote ကို ယူမယ်
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
 local TRACK_DIST = 150    
-local COLLECT_DIST = 25   -- အကွာအဝေးကို နည်းနည်းလျှော့ထားတယ် (ပိုသေချာအောင်)
+local COLLECT_DIST = 20   -- Range ကို backpack script ထဲက 12+ အတိုင်း ပိုနီးအောင် ထားတယ်
 local TARGET_NAME = "Fuel"
 
 local v4Beams = {}
@@ -67,42 +65,39 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
     if not root then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
+        -- Item name စစ်ဆေးမယ်
         if item.Name == TARGET_NAME and not processedItems[item] then
             local pos = item:GetPivot().Position
             local dist = (root.Position - pos).Magnitude
 
-            -- Visual Beam
+            -- Visual Beam ပြမယ်
             if dist <= TRACK_DIST then
                 createV4Path(item, root)
             else
                 removeV4Path(item)
             end
 
-            -- Sync Collection Logic
+            -- Backpack Logic အရ Pickup လုပ်မယ်
             if dist <= COLLECT_DIST then
                 processedItems[item] = true
                 
                 task.spawn(function()
-                    -- ၁။ အရင်ဆုံး PickUp လုပ်မယ်
-                    PickUpRemote:FireServer(item)
+                    -- Backpack script logic အတိုင်း item model ကို တိုက်ရိုက်ပို့မယ်
+                    AdjustRemote:FireServer(item)
                     
-                    -- ၂။ ခဏစောင့်မယ် (Server က inventory ထဲထည့်တာ confirm ဖြစ်အောင်)
-                    task.wait(0.2) 
-                    
-                    -- ၃။ ပြီးမှ Backpack ကို update လုပ်မယ်
-                    AdjustRemote:FireServer() -- အချို့ game တွေမှာ parameter မလိုဘူး၊ ရှိသမျှ update လုပ်တာ
-                    
+                    -- ခေတ္တစောင့်ပြီး Visual ဖျောက်မယ်
+                    task.wait(0.2)
                     removeV4Path(item)
                     
-                    -- ၄။ ပစ္စည်းတကယ်ပျောက်သွားလား စစ်မယ်
-                    task.wait(2)
+                    -- Cooldown (ပစ္စည်း တကယ် ပျောက်/မပျောက် စောင့်ကြည့်မယ်)
+                    task.wait(1.5)
                     processedItems[item] = nil
                 end)
             end
         end
     end
     
-    -- Cleanup
+    -- Orphaned beams ရှင်းမယ်
     for model, _ in pairs(v4Beams) do
         if not model or not model.Parent or not model:IsDescendantOf(workspace) then
             removeV4Path(model)
@@ -110,4 +105,4 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Fuel Master: Collection Fixed Version Loaded.")
+print("Fuel Master: Backpack-Style Sync Loaded.")
