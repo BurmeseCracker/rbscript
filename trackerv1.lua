@@ -15,8 +15,8 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 150 
-local COLLECT_DIST = 60     
+local MAX_VISUAL_DIST = 100 
+local COLLECT_DIST = 100     
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
