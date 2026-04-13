@@ -1,4 +1,4 @@
--- [[ kill.lua - Universal Toggleable Aura ]] --
+
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
