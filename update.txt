@@ -1,0 +1,8 @@
+New Update:
+
+• Add AirJump (Use Jump)
+• Fixed Collecting bugs
+• Add Instant Kill
+(Not Guns Yet)
+
+
