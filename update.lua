@@ -1,107 +1,86 @@
--- [[ update.lua - Announcement Splash (Loader Compatible) ]] --
+-- [[ update.lua - Dynamic Announcement Splash ]] --
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 
--- Loader အတွက် Global Variable ကို Reset လုပ်ထားမယ်
+-- CONFIG: Change this to your raw txt link!
+local TEXT_URL = "https://raw.githubusercontent.com/BurmeseCracker/rbscript/refs/heads/main/update.txt"
+
+-- Loader Variable
 _G.UpdateClosed = false
+
+-- Get Update Text from GitHub
+local success, updateText = pcall(function()
+    return game:HttpGet(TEXT_URL)
+end)
+
+if not success or not updateText then
+    updateText = "Failed to load update notes.\nPlease check your connection."
+end
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AnnouncementSplash"
 screenGui.Parent = CoreGui
-screenGui.IgnoreGuiInset = true -- Full screen behavior
+screenGui.IgnoreGuiInset = true
 
 -- Main Frame
 local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 320, 0, 200)
-mainFrame.Position = UDim2.new(0.5, -160, 0.4, -100)
+mainFrame.Size = UDim2.new(0, 320, 0, 220) -- Slightly taller for more text
+mainFrame.Position = UDim2.new(0.5, -160, 0.4, -110)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-mainFrame.BorderSizePixel = 0
-mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
 
--- Rounded Corners
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = mainFrame
-
--- Top Bar (Header)
+-- Top Bar
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 45)
 title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-title.Text = "Announcement"
-title.TextColor3 = Color3.fromRGB(255, 215, 0) -- Gold
-title.TextSize = 22
+title.Text = "What's New?"
+title.TextColor3 = Color3.fromRGB(255, 215, 0)
+title.TextSize = 20
 title.Font = Enum.Font.GothamBold
 title.Parent = mainFrame
+Instance.new("UICorner", title).CornerRadius = UDim.new(0, 12)
 
-local titleCorner = Instance.new("UICorner")
-titleCorner.Parent = title
-
--- Content Area
+-- Content Area (Now uses the fetched updateText)
 local content = Instance.new("TextLabel")
 content.Size = UDim2.new(1, -30, 1, -100)
 content.Position = UDim2.new(0, 15, 0, 60)
 content.BackgroundTransparency = 1
-content.Text = "New Update:\n\n• Fixed Battery TP (Force Loop)\n• Priority Collection (40-200m)\n• Disabled Auto-Jump Feature"
-content.TextColor3 = Color3.fromRGB(255, 255, 255)
-content.TextSize = 16
+content.Text = updateText -- <--- DYNAMIC TEXT HERE
+content.TextColor3 = Color3.fromRGB(240, 240, 240)
+content.TextSize = 14
 content.Font = Enum.Font.GothamMedium
 content.TextXAlignment = Enum.TextXAlignment.Left
 content.TextYAlignment = Enum.TextYAlignment.Top
+content.TextWrapped = true
 content.Parent = mainFrame
 
 -- Close Button
 local closeBtn = Instance.new("TextButton")
-closeBtn.Name = "CloseButton"
-closeBtn.Size = UDim2.new(0, 120, 0, 35)
-closeBtn.Position = UDim2.new(0.5, -60, 1, -45)
-closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeBtn.Text = "Close"
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.Size = UDim2.new(0, 140, 0, 35)
+closeBtn.Position = UDim2.new(0.5, -70, 1, -45)
+closeBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255) -- Blue color for update
+closeBtn.Text = "Got it!"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
 closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 16
 closeBtn.Parent = mainFrame
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
 
-local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(0, 8)
-btnCorner.Parent = closeBtn
-
--- [[ ANIMATIONS ]] --
-mainFrame.BackgroundTransparency = 1
-title.BackgroundTransparency = 1
-title.TextTransparency = 1
-content.TextTransparency = 1
-closeBtn.BackgroundTransparency = 1
-closeBtn.TextTransparency = 1
-
-local function fadeIn()
-    local info = TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    TweenService:Create(mainFrame, info, {BackgroundTransparency = 0}):Play()
-    TweenService:Create(title, info, {BackgroundTransparency = 0, TextTransparency = 0}):Play()
-    TweenService:Create(content, info, {TextTransparency = 0}):Play()
-    TweenService:Create(closeBtn, info, {BackgroundTransparency = 0, TextTransparency = 0}):Play()
+-- Animation Logic
+mainFrame.GroupTransparency = 1 -- If you have a CanvasGroup, otherwise fade manually
+local function fade(trans)
+    local info = TweenInfo.new(0.5)
+    TweenService:Create(mainFrame, info, {BackgroundTransparency = trans}):Play()
+    TweenService:Create(title, info, {BackgroundTransparency = trans, TextTransparency = trans}):Play()
+    TweenService:Create(content, info, {TextTransparency = trans}):Play()
+    TweenService:Create(closeBtn, info, {BackgroundTransparency = trans, TextTransparency = trans}):Play()
 end
 
-fadeIn()
+fade(0)
 
--- [[ CLOSE LOGIC ]] --
 closeBtn.MouseButton1Click:Connect(function()
-    -- ၁။ Loader ကို ဆက်သွားခိုင်းဖို့ Global variable ပေးမယ်
     _G.UpdateClosed = true
-    
-    -- ၂။ ပျောက်သွားမယ့် Animation
-    local info = TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-    TweenService:Create(mainFrame, info, {
-        Position = UDim2.new(0.5, -160, 0.6, -100),
-        BackgroundTransparency = 1
-    }):Play()
-    TweenService:Create(title, info, {BackgroundTransparency = 1, TextTransparency = 1}):Play()
-    TweenService:Create(content, info, {TextTransparency = 1}):Play()
-    TweenService:Create(closeBtn, info, {BackgroundTransparency = 1, TextTransparency = 1}):Play()
-    
+    fade(1)
     task.wait(0.5)
     screenGui:Destroy()
 end)
-
-print("Update GUI: Ready and waiting for user.")
