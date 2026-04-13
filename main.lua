@@ -2,7 +2,7 @@ local base = "https://raw.githubusercontent.com/BurmeseCracker/rbscript/refs/hea
 
 
 -- [[ LOADER ]] --
-local scripts = {"modM.lua"}
+local scripts = {"modM.lua", "disabledAutoJump.lua"}
 
 for _, file in ipairs(scripts) do
     local success, code = pcall(game.HttpGet, game, base .. file)
