@@ -1,9 +1,5 @@
--- [[ trackerv3.lua - Food Master (SMART LIMITS) ]] --
+-- [[ trackerv3.lua - Food Master (SMART PRIORITY TP + RETURN) ]] --
 local scriptID = "trackerv3" 
-
-if _G[scriptID] ~= true then
-    repeat task.wait(0.5) until _G[scriptID] == true
-end
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -14,9 +10,9 @@ local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
--- CONFIG (V4 STYLE)
-local TRACK_DIST = 100    -- Beam distance
-local COLLECT_DIST = 40   -- Bring distance
+-- CONFIG
+local MAX_VISUAL_DIST = 100
+local COLLECT_RANGE = 40 -- Max distance to start the TP sequence
 local TARGET_NAMES = { ["Chips"] = true, ["Bloxiade"] = true, ["Beans"] = true, ["Bloxy Cola"] = true, ["MRE"] = true}
 
 local v3Beams = {}
@@ -43,15 +39,17 @@ local function createV3Path(model, root)
     local attB = Instance.new("Attachment", targetPart)
     local beam = Instance.new("Beam", root)
     beam.Attachment0, beam.Attachment1 = attP, attB
-    beam.Color = ColorSequence.new(Color3.fromRGB(0, 255, 0)) 
+    beam.Color = ColorSequence.new(Color3.fromRGB(0, 255, 0)) -- Food is Green
     beam.Width0, beam.Width1 = 0.35, 0.35
     beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2.5; beam.FaceCamera = true
     v3Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
+-- [[ MAIN LOOP ]] --
 if _G.TrackerV3Loop then _G.TrackerV3Loop:Disconnect() end
 
 _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
+    -- Check Menu Toggle
     if _G[scriptID] ~= true then 
         for model, _ in pairs(v3Beams) do removeV3Path(model) end
         return 
@@ -59,40 +57,70 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    local hum = char and char:FindFirstChild("Humanoid")
+    if not root or not hum then return end
 
+    local itemsInRange = {}
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
         if TARGET_NAMES[item.Name] and not processed[item] then
             local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")
             if targetPart then
                 local dist = (root.Position - targetPart.Position).Magnitude
-
-                -- 1. Visual Beam (TRACK_DIST)
-                if dist <= TRACK_DIST then
-                    createV3Path(item, root)
+                
+                -- Track for Beams
+                if dist <= MAX_VISUAL_DIST then 
+                    createV3Path(item, root) 
                 else
                     removeV3Path(item)
                 end
-
-                -- 2. Collection Logic (COLLECT_DIST)
-                if dist <= COLLECT_DIST then
-                    processed[item] = true
-                    task.spawn(function()
-                        local startTime = tick()
-                        while tick() - startTime < 1 do
-                            if not item or not item.Parent or not targetPart then break end
-                            targetPart.CFrame = root.CFrame * CFrame.new(0, 0, -2)
-                            if tick() - startTime < 0.1 then
-                                AdjustRemote:FireServer(item)
-                            end
-                            RunService.RenderStepped:Wait()
-                        end
-                        removeV3Path(item)
-                        task.wait(1)
-                        processed[item] = nil
-                    end)
+                
+                -- Check for TP Range
+                if dist <= COLLECT_RANGE then 
+                    table.insert(itemsInRange, {item = item, dist = dist, pos = targetPart.Position})
                 end
             end
         end
     end
+
+    -- Sort to find the CLOSEST food first
+    table.sort(itemsInRange, function(a, b) return a.dist < b.dist end)
+
+    local targetData = itemsInRange[1]
+    if targetData then
+        local item = targetData.item
+        local pos = targetData.pos
+        
+        -- [[ SAVE ORIGINAL POSITION ]] --
+        local originalPos = root.CFrame 
+        processed[item] = true
+        
+        task.spawn(function()
+            local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+            local startTime = tick()
+            
+            -- TP and Fire Remote
+            while tick() - startTime < 0.8 do -- Slight duration for stability
+                if not item or not item.Parent then break end
+                
+                root.CFrame = targetCFrame
+                root.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Stops physics lag
+                
+                if tick() - startTime < 0.1 then
+                    AdjustRemote:FireServer(item)
+                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+                RunService.RenderStepped:Wait()
+            end
+            
+            -- [[ RETURN TO STARTING POSITION ]] --
+            root.CFrame = originalPos
+            
+            task.wait(0.2)
+            removeV3Path(item)
+            task.wait(1.5) -- Cooldown to prevent TP spam
+            processed[item] = nil
+        end)
+    end
 end)
+
+print("Food Master (Smart Priority + Auto Return) Loaded.")
