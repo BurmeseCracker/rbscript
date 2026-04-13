@@ -55,16 +55,22 @@ content.TextYAlignment = Enum.TextYAlignment.Top
 content.TextWrapped = true
 content.Parent = mainFrame
 
+
 -- Close Button
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 140, 0, 35)
-closeBtn.Position = UDim2.new(0.5, -70, 1, -45)
-closeBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255) -- Blue color for update
-closeBtn.Text = "Got it!"
+closeBtn.Name = "CloseButton"
+closeBtn.Size = UDim2.new(0, 220, 0, 50) -- BIG SIZE
+closeBtn.Position = UDim2.new(0.5, -110, 1, -60) -- CENTERED
+closeBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+closeBtn.Text = "GOT IT!" -- All caps looks better on big buttons
 closeBtn.TextColor3 = Color3.new(1, 1, 1)
 closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 20 -- BIG TEXT
 closeBtn.Parent = mainFrame
-Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 10)
+btnCorner.Parent = closeBtn
 
 -- Animation Logic
 mainFrame.GroupTransparency = 1 -- If you have a CanvasGroup, otherwise fade manually
