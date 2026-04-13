@@ -1,28 +1,37 @@
 local base = "https://raw.githubusercontent.com/BurmeseCracker/rbscript/refs/heads/main/"
 
 -- [[ LOADER ]] --
+_G.UpdateClosed = false -- Force reset to false at start
 
--- ၁။ Update Splash ကို အရင် Run မယ်
-local success, updateCode = pcall(game.HttpGet, game, base .. "update.lua")
+-- 1. Load Update Splash
+local success, updateCode = pcall(function() return game:HttpGet(base .. "update.lua") end)
 if success then
-    _G.UpdateClosed = false -- အစမှာ false ထားမယ်
-    loadstring(updateCode)()
+    print("Update GUI Executing...")
+    task.spawn(function()
+        loadstring(updateCode)()
+    end)
+else
+    warn("Could not load update.lua, skipping to menu.")
+    _G.UpdateClosed = true
 end
 
--- ၂။ Close ခလုတ် နှိပ်မယ့်အချိန်ကို စောင့်မယ်
-repeat task.wait(0.2) until _G.UpdateClosed == true
+-- 2. Wait for the "Got it" button
+-- Added a safety counter so it doesn't freeze forever if update.lua fails
+local timeout = 0
+repeat 
+    task.wait(0.5) 
+    timeout = timeout + 1
+until _G.UpdateClosed == true or timeout > 60 -- Wait max 30 seconds
 
--- ၃။ ခလုတ်နှိပ်ပြီးမှ ကျန်တဲ့ Script တွေကို Run မယ်
+-- 3. Run remaining scripts
 local remainingScripts = {"modM.lua", "disabledAutoJump.lua"}
 
 for _, file in ipairs(remainingScripts) do
-    local success, code = pcall(game.HttpGet, game, base .. file)
-    if success then
-        print("Loading: " .. file)
-        loadstring(code)()
+    local s, code = pcall(function() return game:HttpGet(base .. file) end)
+    if s then
+        print("Successfully Loaded: " .. file)
+        task.spawn(function() loadstring(code)() end)
     else
         warn("Failed to load: " .. file)
     end
 end
-
-print("All scripts loaded after announcement closed.")
