@@ -1,4 +1,4 @@
--- [[ trackerv1.lua - Battery Master (SMART PROGRESSIVE TP + RETURN) ]] --
+-- [[ trackerv1.lua - Battery Master (SMART BRING ITEM) ]] --
 local scriptID = "trackerv1" 
 
 if _G[scriptID] ~= true then
@@ -59,8 +59,7 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChild("Humanoid")
-    if not root or not hum then return end
+    if not root then return end
 
     local itemsInRange = {}
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
@@ -68,8 +67,9 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")
             if targetPart then
                 local dist = (root.Position - targetPart.Position).Magnitude
+                -- Range set to 40 studs (bring distance)
                 if dist <= 40 then 
-                    table.insert(itemsInRange, {item = item, dist = dist, pos = targetPart.Position})
+                    table.insert(itemsInRange, {item = item, dist = dist, part = targetPart})
                 end
                 
                 if dist <= MAX_VISUAL_DIST then createV1Path(item, root) end
@@ -82,41 +82,33 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
     local targetData = itemsInRange[1]
     if targetData then
         local item = targetData.item
-        local pos = targetData.pos
+        local itemPart = targetData.part
         
-        -- [[ GET BACK TO ORIGINAL PLACE LOGIC START ]] --
-        local originalPos = root.CFrame -- Save your current location before TP
-        -- [[ GET BACK TO ORIGINAL PLACE LOGIC END ]] --
-
         processed[item] = true
         
         task.spawn(function()
-            local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+            -- We don't change root.CFrame anymore!
+            -- We move the ITEM to US instead.
             local startTime = tick()
             
-            while tick() - startTime < 2 do
-                if not item or not item.Parent then break end
+            while tick() - startTime < 1 do -- 1 second is enough to "bring" it
+                if not item or not item.Parent or not itemPart then break end
                 
-                root.CFrame = targetCFrame
-                root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                -- Move item to character's position
+                itemPart.CFrame = root.CFrame * CFrame.new(0, 0, -2) 
                 
+                -- Fire pick-up remote
                 if tick() - startTime < 0.1 then
                     AdjustRemote:FireServer(item)
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
                 end
                 RunService.RenderStepped:Wait()
             end
             
-            -- [[ RETURN TO ORIGINAL POSITION ]] --
-            root.CFrame = originalPos
-            -- [[ RETURN TO ORIGINAL POSITION ]] --
-
-            task.wait(0.2)
             removeV1Path(item)
-            task.wait(1.5) 
+            task.wait(1) 
             processed[item] = nil
         end)
     end
 end)
 
-print("Battery Master (Smart Priority 40-200 + Auto Return) Loaded.")
+print("Battery Master (Bring Mode) Loaded.")
