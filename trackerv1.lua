@@ -17,8 +17,8 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local MAX_VISUAL_DIST = 150 -- Beam မြင်ရမယ့် အကွာအဝေး
-local COLLECT_DIST = 30     -- အနားရောက်မှ ကောက်မယ့် အကွာအဝေး
+local MAX_VISUAL_DIST = 100 -- Beam မြင်ရမယ့် အကွာအဝေး
+local COLLECT_DIST = 60     -- အနားရောက်မှ ကောက်မယ့် အကွာအဝေး
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
