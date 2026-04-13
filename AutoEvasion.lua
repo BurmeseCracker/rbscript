@@ -1,86 +1,58 @@
--- [[ AutoAim_Hold_ESP.lua ]] --
+-- [[ Full Auto Kill Aura - Swing + HitTargets ]] --
+local RunService = game:GetService("RunService")
+local player = game:GetService("Players").LocalPlayer
 
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local UserInputService = game:GetService("UserInputService")
-local player = Players.LocalPlayer
-local camera = Workspace.CurrentCamera
+-- CONFIGURATION
+local KILL_RANGE = 20 -- ၂၀ ပေအတွင်း အကုန်သေမယ်
+local ATTACK_SPEED = 0.2 -- တိုက်ခိုက်မယ့်အမြန်နှုန်း (စက္ကန့်)
 
--- Config
-local TARGET_NAME = "Bloater" 
-local AIM_DISTANCE = 40
-local isAiming = false -- Aim လုပ်နေသလား စစ်ရန်
+local lastAttack = 0
 
--- Mouse ညာဘက်ခလုတ် ဖိထားခြင်း ရှိ/မရှိ စစ်ဆေးခြင်း
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.UserInputType == Enum.UserInputType.MouseButton2 then
-        isAiming = true -- ညာဘက်ခလုတ် ဖိထားလျှင် Aim မည်
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        isAiming = false -- လွှတ်လိုက်လျှင် Free Cam ပြန်ဖြစ်မည်
-    end
-end)
-
--- Function: Highlight (ESP)
-local function applyRedHighlight(model)
-    local highlight = model:FindFirstChild("BloaterHighlight")
-    if not highlight then
-        highlight = Instance.new("Highlight")
-        highlight.Name = "BloaterHighlight"
-        highlight.Parent = model
-        highlight.FillColor = Color3.fromRGB(255, 0, 0)
-        highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
-        highlight.FillTransparency = 0.4 
-        highlight.OutlineTransparency = 0 
-    end
-end
-
--- Function: Auto Aim Logic
-local function autoAim(targetRoot)
-    if targetRoot and isAiming then
-        -- ညာဘက်ခလုတ် ဖိထားမှသာ Camera ကို လှည့်မည်
-        local targetPos = camera:WorldToViewportPoint(targetRoot.Position)
-        camera.CFrame = CFrame.new(camera.CFrame.Position, targetRoot.Position)
-    end
-end
-
--- Main Loop
-task.spawn(function()
-    print("Hold Right-Click to Aim + ESP Started...")
-    _G.AutoAimActive = true
+RunService.Heartbeat:Connect(function()
+    -- Attack Speed အတွက် ခဏစောင့်မယ် (Anti-Cheat ကန်ထုတ်တာမျိုးမဖြစ်အောင်)
+    if tick() - lastAttack < ATTACK_SPEED then return end
     
-    while _G.AutoAimActive do
-        local charFolder = Workspace:FindFirstChild("Characters")
-        local myChar = player.Character
-        local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    local char = player.Character
+    if not char then return end
+    
+    -- လက်ထဲမှာ Bat ရှိမရှိ စစ်မယ်
+    local bat = char:FindFirstChild("Bat")
+    if not bat then return end
+    
+    local swingRemote = bat:FindFirstChild("Swing")
+    local hitRemote = bat:FindFirstChild("HitTargets")
+    local charactersFolder = workspace:FindFirstChild("Characters")
+    
+    if not (swingRemote and hitRemote and charactersFolder) then return end
 
-        if charFolder and myHrp then
-            local closestBloater = nil
-            local shortestDist = AIM_DISTANCE
+    local targetFound = false
 
-            for _, ent in pairs(charFolder:GetChildren()) do
-                if ent:IsA("Model") and ent.Name == TARGET_NAME then
-                    applyRedHighlight(ent) -- ESP ကတော့ အမြဲပြနေမည်
-
-                    local entRoot = ent:FindFirstChild("HumanoidRootPart") or ent:FindFirstChild("Head")
-                    if entRoot then
-                        local dist = (myHrp.Position - entRoot.Position).Magnitude
-                        if dist < shortestDist then
-                            shortestDist = dist
-                            closestBloater = entRoot
-                        end
-                    end
+    -- အနားက Zombie တွေကို ရှာမယ်
+    for _, zombie in pairs(charactersFolder:GetChildren()) do
+        if zombie:IsA("Model") and zombie ~= char then
+            local root = zombie:FindFirstChild("HumanoidRootPart")
+            local hum = zombie:FindFirstChildOfClass("Humanoid")
+            
+            if root and hum and hum.Health > 0 then
+                local dist = (char.HumanoidRootPart.Position - root.Position).Magnitude
+                
+                -- ၂၀ ပေအတွင်းရှိရင်
+                if dist <= KILL_RANGE then
+                    targetFound = true
+                    
+                    -- ၁။ Hit Signal ပို့မယ်
+                    local args = {{ zombie }}
+                    hitRemote:FireServer(unpack(args))
                 end
             end
-
-            -- ညာဘက်ခလုတ် ဖိထားမှသာ Aim ခိုင်းမည်
-            if closestBloater and isAiming then
-                autoAim(closestBloater)
-            end
         end
-        task.wait(0.01)
+    end
+    
+    -- တကယ်လို့ အနားမှာ Zombie ရှိရင် Swing (ဝှေ့ယမ်းတာ) ကို တစ်ခါတည်းလုပ်မယ်
+    if targetFound then
+        swingRemote:FireServer()
+        lastAttack = tick()
     end
 end)
+
+print("Full Auto Aura: ACTIVE. Just equip your Bat and stand near zombies!")
