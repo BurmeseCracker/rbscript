@@ -1,9 +1,7 @@
--- [[ trackerv1.lua - Battery Master (SMART LIMITS) ]] --
+-- [[ trackerv1.lua - Battery Master (FIXED SYNC) ]] --
 local scriptID = "trackerv1" 
 
-if _G[scriptID] ~= true then
-    repeat task.wait(0.5) until _G[scriptID] == true
-end
+-- REMOVED THE REPEAT LOOP TO PREVENT CRASHING/FREEZING --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -14,9 +12,9 @@ local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
--- CONFIG (V4 STYLE)
-local TRACK_DIST = 100    -- Beam distance
-local COLLECT_DIST = 40   -- Bring distance
+-- CONFIG
+local TRACK_DIST = 100    
+local COLLECT_DIST = 40   
 local TARGET_NAMES = {["Battery"] = true, ["Battery Pack"] = true}
 
 local v1Beams = {}
@@ -49,9 +47,11 @@ local function createV1Path(model, root)
     v1Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
+-- [[ MAIN LOOP ]] --
 if _G.BatteryMasterLoop then _G.BatteryMasterLoop:Disconnect() end
 
 _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
+    -- Check global variable from Menu
     if _G[scriptID] ~= true then 
         for model, _ in pairs(v1Beams) do removeV1Path(model) end
         return 
@@ -67,14 +67,14 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             if targetPart then
                 local dist = (root.Position - targetPart.Position).Magnitude
                 
-                -- 1. Visual Beam (TRACK_DIST)
+                -- Visual Beam
                 if dist <= TRACK_DIST then
                     createV1Path(item, root)
                 else
-                    removeV4Path(item)
+                    removeV1Path(item)
                 end
 
-                -- 2. Collection Logic (COLLECT_DIST)
+                -- Collection Logic (Bring)
                 if dist <= COLLECT_DIST then
                     processed[item] = true
                     task.spawn(function()
@@ -96,3 +96,5 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
 end)
+
+print("Battery Master: Sync Fixed & Loaded.")
