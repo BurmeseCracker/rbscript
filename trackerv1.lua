@@ -98,7 +98,7 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             local startTime = tick()
             
             -- Force Loop 10 seconds (Auto-break ပါမယ်)
-            while tick() - startTime < 10 do
+            while tick() - startTime < 5 do
                 if not item or not item.Parent then break end
                 
                 root.CFrame = targetCFrame
