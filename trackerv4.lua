@@ -1,4 +1,4 @@
--- [[ trackerv4.lua - Fuel Master (SYNC + COLLECTION) ]] --
+-- [[ trackerv4.lua - Fuel Master DEBUGGED ]] --
 local scriptID = "trackerv4" 
 
 if _G[scriptID] ~= true then
@@ -12,15 +12,15 @@ local player = Players.LocalPlayer
 
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 
--- Remotes (Mirrored from Scrap script)
+-- Remotes
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
-local TRACK_DIST = 150    -- Distance to show beams
-local COLLECT_DIST = 35   -- Distance to auto-pickup
-local ITEM_NAME = "Fuel"
+local TRACK_DIST = 150    
+local COLLECT_DIST = 35   
+local TARGET_NAME = "Fuel" -- Exact name of the item in DroppedItems
 
 local v4Beams = {}
 local processedItems = {}
@@ -38,22 +38,17 @@ local function removeV4Path(model)
     end
 end
 
-local function clearAllBeams()
-    for model, _ in pairs(v4Beams) do
-        removeV4Path(model)
-    end
-end
-
-local function createV4Path(model, root, color)
+local function createV4Path(model, root)
     if v4Beams[model] then return end
-    local targetPart = model.PrimaryPart or model:FindFirstChild("Union") or model:FindFirstChildWhichIsA("BasePart")
+    -- Look for Union or any BasePart to attach the beam to
+    local targetPart = model:FindFirstChild("Union") or model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
     if not targetPart then return end
 
     local attP = Instance.new("Attachment", root)
     local attB = Instance.new("Attachment", targetPart)
     local beam = Instance.new("Beam", root)
     beam.Attachment0, beam.Attachment1 = attP, attB
-    beam.Color = ColorSequence.new(color)
+    beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) 
     beam.Width0, beam.Width1 = 0.5, 0.5
     beam.Texture = "rbxassetid://44611181"
     beam.TextureSpeed = 2
@@ -65,9 +60,8 @@ end
 if _G.FuelMasterLoop then _G.FuelMasterLoop:Disconnect() end
 
 _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
-    -- CRITICAL: If Menu is OFF, destroy all beams and stop
     if _G[scriptID] ~= true then 
-        clearAllBeams()
+        for model, _ in pairs(v4Beams) do removeV4Path(model) end
         return 
     end
 
@@ -76,39 +70,42 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
     if not root then return end
 
     for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-        if item.Name == ITEM_NAME and not processedItems[item] then
-            local pos = item:GetPivot().Position
-            local dist = (root.Position - pos).Magnitude
+        -- FIX: Simplified name check to ensure it actually triggers
+        if item.Name == TARGET_NAME and not processedItems[item] then
+            local targetPart = item:FindFirstChild("Union") or item:FindFirstChildWhichIsA("BasePart")
+            if not targetPart then continue end
+            
+            local dist = (root.Position - targetPart.Position).Magnitude
 
-            -- 1. VISUAL TRACKING (Red Beam)
+            -- 1. TRACKING
             if dist <= TRACK_DIST then
-                createV4Path(item, root, Color3.fromRGB(255, 0, 0))
+                createV4Path(item, root)
             else
                 removeV4Path(item)
             end
 
-            -- 2. INSTANT SYNC PICKUP (Mirroring Scrap logic)
+            -- 2. COLLECTION (The "Latch" fix)
             if dist <= COLLECT_DIST then
-                processedItems[item] = true
-
+                processedItems[item] = true -- Lock item so loop doesn't spam it
+                
                 task.spawn(function()
-                    task.wait(0.1) -- Stability delay
-                    
-                    -- Remote calls for collection
+                    -- Tell the server we are picking it up
                     PickUpRemote:FireServer(item)
+                    task.wait(0.1)
                     AdjustRemote:FireServer(item)
                     
-                    task.wait(0.2)
+                    -- Remove visual beam immediately after firing
                     removeV4Path(item)
                     
-                    task.wait(2.5) -- Cooldown to prevent spam/lag
+                    -- Wait before allowing this specific item to be tracked again
+                    task.wait(2) 
                     processedItems[item] = nil
                 end)
             end
         end
     end
     
-    -- Cleanup orphaned beams
+    -- Cleanup for items that vanished or were taken by others
     for model, _ in pairs(v4Beams) do
         if not model or not model.Parent then
             removeV4Path(model)
@@ -116,4 +113,4 @@ _G.FuelMasterLoop = RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Fuel Master Loaded (Auto-Collection Enabled).")
+print("Fuel Master Fixed & Loaded.")
