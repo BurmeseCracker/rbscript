@@ -1,4 +1,4 @@
--- [[ update.lua - Fixed Template ]] --
+-- [[ update.lua - Fixed Template with Credits ]] --
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 
@@ -13,8 +13,8 @@ local sg = Instance.new("ScreenGui", CoreGui)
 sg.IgnoreGuiInset = true
 
 local main = Instance.new("Frame", sg)
-main.Size = UDim2.new(0, 320, 0, 280)
-main.Position = UDim2.new(0.5, -160, 0.5, -140)
+main.Size = UDim2.new(0, 320, 0, 300) -- Increased height slightly for credits
+main.Position = UDim2.new(0.5, -160, 0.5, -150)
 main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 Instance.new("UICorner", main).CornerRadius = UDim.new(0, 15)
 
@@ -33,14 +33,25 @@ content.Position = UDim2.new(0, 15, 0, 65)
 content.BackgroundTransparency = 1
 content.Text = updateText
 content.TextColor3 = Color3.new(1, 1, 1)
-content.TextSize = 16
+content.TextSize = 15
 content.Font = Enum.Font.GothamMedium
 content.TextWrapped = true
 content.TextXAlignment = Enum.TextXAlignment.Left
 content.TextYAlignment = Enum.TextYAlignment.Top
 
+-- [[ CREDITS LABEL - THIS IS WHAT WAS MISSING ]] --
+local credits = Instance.new("TextLabel", main)
+credits.Size = UDim2.new(1, 0, 0, 20)
+credits.Position = UDim2.new(0, 0, 1, -100) -- Placed above the button
+credits.BackgroundTransparency = 1
+credits.Text = "Modded by BTH"
+credits.TextColor3 = Color3.fromRGB(150, 150, 150) -- Subtle grey color
+credits.TextSize = 14
+credits.Font = Enum.Font.GothamBold
+credits.Parent = main
+
 local btn = Instance.new("TextButton", main)
-btn.Size = UDim2.new(0, 240, 0, 55) -- BIG BUTTON
+btn.Size = UDim2.new(0, 240, 0, 55)
 btn.Position = UDim2.new(0.5, -120, 1, -75)
 btn.BackgroundColor3 = Color3.fromRGB(0, 130, 255)
 btn.Text = "GOT IT!"
@@ -52,11 +63,11 @@ Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 12)
 -- [[ THE FIX ]] --
 btn.MouseButton1Click:Connect(function()
     print("Signaling Loader...")
-    _G.UpdateClosed = true -- Sends signal to Loader script
+    _G.UpdateClosed = true 
     
     -- Animation Out
     local tween = TweenService:Create(main, TweenInfo.new(0.4), {
-        Position = UDim2.new(0.5, -160, 0.6, -140),
+        Position = UDim2.new(0.5, -160, 0.6, -150),
         BackgroundTransparency = 1
     })
     tween:Play()
