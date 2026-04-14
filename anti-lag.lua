@@ -1,4 +1,4 @@
--- [[ ANTI-LAG ULTIMATE EDITION - FORCE DELETE & OPTIMIZE ]] --
+-- [[ ANTI-LAG NIGHT MODE EDITION ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -86,21 +86,35 @@ local function CreateFPSUI()
     return gui, createLabel(UDim2.new(0, 10, 0, 0)), createLabel(UDim2.new(0, 10, 0.5, 0))
 end
 
--- [[ THE "BOOST" OPTIMIZATION ]] --
+-- [[ THE "BOOST + NIGHT" OPTIMIZATION ]] --
 local function optimizeGame()
-    -- Lighting
+    -- 1. Performance Lighting
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 9e9
     Lighting.EnvironmentDiffuseScale = 0
     Lighting.EnvironmentSpecularScale = 0
+    Lighting.ClockTime = 0 -- Sets it to midnight
     
+    -- 2. "A Little Dark" Night Mode Setup
+    Lighting.Ambient = Color3.fromRGB(30, 30, 35) -- Dark bluish tint
+    Lighting.OutdoorAmbient = Color3.fromRGB(20, 20, 25)
+    Lighting.Brightness = 0.5 -- Low brightness for night feel
+    
+    -- Add ColorCorrection for that clean night look
+    local cc = Lighting:FindFirstChild("NightModeCC") or Instance.new("ColorCorrectionEffect", Lighting)
+    cc.Name = "NightModeCC"
+    cc.Brightness = -0.1
+    cc.Contrast = 0.1
+    cc.Saturation = -0.2
+    cc.Enabled = true
+
     for _, v in ipairs(Lighting:GetChildren()) do
-        if v:IsA("PostProcessEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("SunRaysEffect") then
+        if (v:IsA("PostProcessEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("SunRaysEffect")) and v.Name ~= "NightModeCC" then
             v.Enabled = false
         end
     end
 
-    -- World Scan (Materials & Meshes)
+    -- 3. World Scan
     for _, v in ipairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") then
             v.Material = Enum.Material.SmoothPlastic
@@ -115,7 +129,6 @@ local function optimizeGame()
         elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
             v.Enabled = false
         elseif v:IsA("Beam") then
-            -- ONLY delete if it's NOT your Master Scripts Beams
             local isMasterBeam = v.Parent and (v.Parent.Name == "HumanoidRootPart" or v.Parent:IsA("Model"))
             if not isMasterBeam then
                 v.Enabled = false
@@ -123,18 +136,13 @@ local function optimizeGame()
         end
     end
 
-    -- UI Lag Clean
-    for _, v in ipairs(player.PlayerGui:GetDescendants()) do
-        if v:IsA("UIBlurEffect") then v.Enabled = false end
-    end
-    
-    -- Other Player Accessories (Extreme Boost)
+    -- 4. Other Player Clean (Extreme Boost)
     local charFolder = workspace:FindFirstChild("Characters")
     if charFolder then
         for _, other in pairs(charFolder:GetChildren()) do
             if other ~= player.Character then
                 for _, item in pairs(other:GetChildren()) do
-                    if item:IsA("Accessory") or item:IsA("Clothing") or item:IsA("ShirtGraphic") then
+                    if item:IsA("Accessory") or item:IsA("Clothing") then
                         item:Destroy()
                     end
                 end
@@ -167,13 +175,21 @@ _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
             pl.Text = "Ping: " .. math.floor(player:GetNetworkPing() * 1000) .. "ms"
         end
     else
+        -- CLEANUP (OFF)
         local existingGui = player.PlayerGui:FindFirstChild("AntiLagGui")
         if existingGui then
             existingGui:Destroy()
             Lighting.GlobalShadows = true
+            Lighting.ClockTime = 14 -- Back to day
+            Lighting.Brightness = 2
+            Lighting.Ambient = Color3.fromRGB(127, 127, 127)
+            
+            local cc = Lighting:FindFirstChild("NightModeCC")
+            if cc then cc.Enabled = false end
+            
             settings().Rendering.QualityLevel = 0
         end
     end
 end)
 
-print("Anti-Lag: All features active. Tracker beams protected.")
+print("Anti-Lag: Night Mode Optimized.")
