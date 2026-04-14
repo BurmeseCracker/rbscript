@@ -82,20 +82,34 @@ local function AddToggle(name, fileName)
     Button.TextSize = 14
     Button.LayoutOrder = orderCount
     Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
-    
-    Button.MouseButton1Click:Connect(function()
-        _G[scriptID] = not _G[scriptID]
+
+    -- [ REFRESH LOGIC ] This makes buttons update when restart.lua runs
+    local function RefreshUI()
         if _G[scriptID] then
             Button.Text = name .. " : ON"
             Button.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
-            task.spawn(function()
-                local success, code = pcall(function() return game:HttpGet(base .. fileName) end)
-                if success then loadstring(code)() end
-            end)
         else
             Button.Text = name .. " : OFF"
             Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
         end
+    end
+
+    task.spawn(function()
+        while task.wait(0.3) do
+            if not ScreenGui or not ScreenGui.Parent then break end
+            RefreshUI()
+        end
+    end)
+    
+    Button.MouseButton1Click:Connect(function()
+        _G[scriptID] = not _G[scriptID]
+        if _G[scriptID] then
+            task.spawn(function()
+                local success, code = pcall(function() return game:HttpGet(base .. fileName) end)
+                if success then loadstring(code)() end
+            end)
+        end
+        RefreshUI()
     end)
 end
 
@@ -166,21 +180,14 @@ AddToggle("Instant Kill", "kill.lua")
 AddToggle("HitBox Expander", "hitbox.lua")
 
 AddSection("SETTINGS MENU")
-AddToggle("Anti-lag", "anti-lag.lua")
+AddToggle("Anti-lag", "anti-lag.lua", "re.lua")
+
+
+
 AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
-    -- Reset all global variables
-    _G["speed"] = false
-    _G["noclip"] = false
-    _G["jump"] = false
-  
-    _G["kill"] = false
-    _G["trackerv1"] = false
-    _G["trackerv2"] = false
-    _G["trackerv3"] = false
-    _G["trackerv4"] = false
-    _G["trackerv5"] = false
-    _G["anti-lag"] = false
-    _G["hitbox"] = false
+    _G["speed"] = false; _G["noclip"] = false; _G["jump"] = false; _G["kill"] = false
+    _G["trackerv1"] = false; _G["trackerv2"] = false; _G["trackerv3"] = false
+    _G["trackerv4"] = false; _G["trackerv5"] = false; _G["anti-lag"] = false; _G["hitbox"] = false
     
     task.wait(0.3)
     ScreenGui:Destroy()
