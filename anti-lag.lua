@@ -1,4 +1,4 @@
--- [[ ANTI-LAG INFINITE YIELD EDITION - FORCE DELETE ]] --
+-- [[ ANTI-LAG ULTIMATE EDITION - FORCE DELETE & OPTIMIZE ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -8,22 +8,19 @@ local RS = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
 -- [[ AGGRESSIVE DELETION ]] --
--- This function will keep looking for the folders until it finds and deletes them
 local function forceDelete(parent, name)
     task.spawn(function()
         while true do
             local target = parent:FindFirstChild(name)
             if target then
                 pcall(function() target:Destroy() end)
-                print(name .. " has been force deleted.")
                 break
             end
-            task.wait(1) -- Check every second until it exists to delete it
+            task.wait(1) 
         end
     end)
 end
 
--- Force delete the specific targets
 forceDelete(workspace, "Fog")
 forceDelete(RS:WaitForChild("Assets"), "Cutscenes")
 
@@ -38,11 +35,6 @@ task.spawn(function()
         if effects then effects:Destroy() end
     end
 end)
-
--- Cleanup old instances
-if _G.AntiLagConnection then _G.AntiLagConnection:Disconnect() end
-local oldGui = player.PlayerGui:FindFirstChild("AntiLagGui")
-if oldGui then oldGui:Destroy() end
 
 -- [ DRAG LOGIC ]
 local function MakeDraggable(UIElement)
@@ -94,10 +86,13 @@ local function CreateFPSUI()
     return gui, createLabel(UDim2.new(0, 10, 0, 0)), createLabel(UDim2.new(0, 10, 0.5, 0))
 end
 
--- [[ OPTIMIZATION FUNCTION ]] --
+-- [[ THE "BOOST" OPTIMIZATION ]] --
 local function optimizeGame()
+    -- Lighting
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 9e9
+    Lighting.EnvironmentDiffuseScale = 0
+    Lighting.EnvironmentSpecularScale = 0
     
     for _, v in ipairs(Lighting:GetChildren()) do
         if v:IsA("PostProcessEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("SunRaysEffect") then
@@ -105,14 +100,45 @@ local function optimizeGame()
         end
     end
 
+    -- World Scan (Materials & Meshes)
     for _, v in ipairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") then
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
+            v.Reflectance = 0
+            if v:IsA("MeshPart") then
+                v.RenderFidelity = Enum.RenderFidelity.Performance
+                v.CollisionFidelity = Enum.CollisionFidelity.Box
+            end
         elseif v:IsA("Decal") or v:IsA("Texture") then
             v.Transparency = 1
         elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
             v.Enabled = false
+        elseif v:IsA("Beam") then
+            -- ONLY delete if it's NOT your Master Scripts Beams
+            local isMasterBeam = v.Parent and (v.Parent.Name == "HumanoidRootPart" or v.Parent:IsA("Model"))
+            if not isMasterBeam then
+                v.Enabled = false
+            end
+        end
+    end
+
+    -- UI Lag Clean
+    for _, v in ipairs(player.PlayerGui:GetDescendants()) do
+        if v:IsA("UIBlurEffect") then v.Enabled = false end
+    end
+    
+    -- Other Player Accessories (Extreme Boost)
+    local charFolder = workspace:FindFirstChild("Characters")
+    if charFolder then
+        for _, other in pairs(charFolder:GetChildren()) do
+            if other ~= player.Character then
+                for _, item in pairs(other:GetChildren()) do
+                    if item:IsA("Accessory") or item:IsA("Clothing") or item:IsA("ShirtGraphic") then
+                        item:Destroy()
+                    end
+                end
+            end
         end
     end
 end
@@ -121,6 +147,8 @@ local lastTime = tick()
 local fl, pl
 
 -- [[ MAIN LOOP ]] --
+if _G.AntiLagConnection then _G.AntiLagConnection:Disconnect() end
+
 _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
     if _G["anti-lag"] == true then
         if not player.PlayerGui:FindFirstChild("AntiLagGui") then
@@ -148,4 +176,4 @@ _G.AntiLagConnection = RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("Anti-Lag Optimized & Loaded!")
+print("Anti-Lag: All features active. Tracker beams protected.")
