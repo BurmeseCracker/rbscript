@@ -13,10 +13,16 @@ local function ForceStop()
         _G[name] = false
     end
 
+   
     -- 2. Disconnect Heartbeat Loops
     if _G.ScrapMasterLoop then
         _G.ScrapMasterLoop:Disconnect()
         _G.ScrapMasterLoop = nil
+    end
+    
+    if _G.BatteryMasterLoop then
+        _G.BatteryMasterLoop:Disconnect()
+        _G.BatteryMasterLoop = nil
     end
 
     -- 3. Clear Visuals (Beams/ESP)
