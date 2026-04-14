@@ -1,5 +1,6 @@
--- [[ trackerv2.lua - Scrap Master (SCRAP + AUTO-COMBAT PRIORITY) ]] --
+-- [[ trackerv2.lua - Scrap Master (FULL BEAMS + AUTO-TOGGLE KILL) ]] --
 local scriptID = "trackerv2" 
+local GITHUB_URL = "https://raw.githubusercontent.com/BurmeseCracker/rbscript/refs/heads/main/kill.lua"
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -8,7 +9,7 @@ local player = Players.LocalPlayer
 
 local DROP_FOLDER = workspace:WaitForChild("DroppedItems")
 local PILE_FOLDER = workspace:WaitForChild("Structures") 
-local CHAR_FOLDER = workspace:WaitForChild("Characters") -- Character folder ကို စစ်မယ်
+local CHAR_FOLDER = workspace:WaitForChild("Characters")
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
@@ -24,7 +25,7 @@ local lastSwing = 0
 local ITEM_NAME = "Scrap"
 local PILE_NAME = "Scrap Pile"
 
--- [[ GLOBAL BEAM HANDLING ]] --
+-- [[ BEAM SYSTEM ]] --
 if _G.ScrapBeams then
     for model, data in pairs(_G.ScrapBeams) do
         pcall(function()
@@ -74,6 +75,7 @@ if _G.ScrapMasterLoop then _G.ScrapMasterLoop:Disconnect() end
 _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     if _G[scriptID] ~= true then 
         clearAllBeams()
+        _G["kill"] = false -- Disable kill if main script is off
         _G.ScrapMasterLoop:Disconnect()
         _G.ScrapMasterLoop = nil
         return 
@@ -84,24 +86,48 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     local tool = char and char:FindFirstChildOfClass("Tool")
     if not root then return end
 
-    local combatTargets = {} -- NPC/Players
-    local pileTargets = {}   -- Scrap Piles
-    local currentModels = {} -- For beam cleanup
+    local currentModels = {} 
 
-    -- ၁။ အနားက လူ (Humanoids) တွေကို အရင်ရှာမယ် (PRIORITY 1)
+    -------------------------------------------------------
+    -- ၁။ SMART ENEMY CHECK (AUTO ON/OFF)
+    -------------------------------------------------------
+    local enemyNearby = false
     for _, targetChar in pairs(CHAR_FOLDER:GetChildren()) do
-        if targetChar ~= char and targetChar:FindFirstChild("Humanoid") and targetChar:FindFirstChild("Humanoid").Health > 0 then
-            local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-            if targetRoot then
-                local dist = (root.Position - targetRoot.Position).Magnitude
+        if targetChar ~= char and targetChar:FindFirstChild("Humanoid") and targetChar.Humanoid.Health > 0 then
+            local tRoot = targetChar:FindFirstChild("HumanoidRootPart")
+            if tRoot then
+                local dist = (root.Position - tRoot.Position).Magnitude
                 if dist <= ATTACK_RANGE then
-                    table.insert(combatTargets, targetChar)
+                    enemyNearby = true
+                    break
                 end
             end
         end
     end
 
-    -- ၂။ Scrap Pile တွေကို ရှာမယ် (PRIORITY 2)
+    if enemyNearby then
+        -- ENABLE KILL SCRIPT
+        if _G["kill"] ~= true then
+            _G["kill"] = true
+            task.spawn(function()
+                local success, code = pcall(function() return game:HttpGet(GITHUB_URL) end)
+                if success then loadstring(code)() end
+            end)
+        end
+        clearAllBeams() -- Hide beams during combat for performance
+        return -- STOP SCRAP LOGIC WHILE KILLING
+    else
+        -- DISABLE KILL SCRIPT (No enemies nearby)
+        if _G["kill"] == true then
+            _G["kill"] = false
+            print("No enemies near. Resuming Scrap Master...")
+        end
+    end
+
+    -------------------------------------------------------
+    -- ၂။ Scrap Pile Beams & Targets
+    -------------------------------------------------------
+    local pileTargets = {}
     for _, pile in pairs(PILE_FOLDER:GetChildren()) do
         if pile.Name == PILE_NAME then
             currentModels[pile] = true
@@ -122,41 +148,33 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
 
-    -- ၃။ HIT LOGIC (ဦးစားပေးစနစ်)
-    if tool and tick() - lastSwing >= SWING_COOLDOWN then
+    -------------------------------------------------------
+    -- ၃။ HIT LOGIC (Scrap Only)
+    -------------------------------------------------------
+    if tool and #pileTargets > 0 and tick() - lastSwing >= SWING_COOLDOWN then
         local hitRemote = tool:FindFirstChild("HitTargets")
         local swingRemote = tool:FindFirstChild("Swing")
-        
         if hitRemote and swingRemote then
-            if #combatTargets > 0 then
-                -- လူရှိရင် လူကိုထုမယ်
-                hitRemote:FireServer(combatTargets)
-                swingRemote:FireServer()
-                lastSwing = tick()
-            elseif #pileTargets > 0 then
-                -- လူမရှိရင် Scrap ကိုထုမယ်
-                hitRemote:FireServer(pileTargets)
-                swingRemote:FireServer()
-                lastSwing = tick()
-            end
+            hitRemote:FireServer(pileTargets)
+            swingRemote:FireServer()
+            lastSwing = tick()
         end
     end
 
-    -- ၄။ SILENT COLLECT (Dropped Scrap)
+    -------------------------------------------------------
+    -- ၄။ SILENT COLLECT
+    -------------------------------------------------------
     for _, item in pairs(DROP_FOLDER:GetChildren()) do
         if item.Name == ITEM_NAME and not processedItems[item] then
             local itemPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
-            if itemPart then
-                local dist = (root.Position - itemPart.Position).Magnitude
-                if dist <= COLLECT_DIST then
-                    processedItems[item] = true
-                    task.spawn(function()
-                        PickUpRemote:FireServer(item)
-                        AdjustRemote:FireServer(item)
-                        task.wait(1)
-                        processedItems[item] = nil
-                    end)
-                end
+            if itemPart and (root.Position - itemPart.Position).Magnitude <= COLLECT_DIST then
+                processedItems[item] = true
+                task.spawn(function()
+                    PickUpRemote:FireServer(item)
+                    AdjustRemote:FireServer(item)
+                    task.wait(1)
+                    processedItems[item] = nil
+                end)
             end
         end
     end
@@ -168,5 +186,3 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
 end)
-
-print("Scrap Master V2: Combat Priority Mode Loaded.")
