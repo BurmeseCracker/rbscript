@@ -73,9 +73,10 @@ end
 if _G.ScrapMasterLoop then _G.ScrapMasterLoop:Disconnect() end
 
 _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
+    -- Ensure script stays alive based on global variable
     if _G[scriptID] ~= true then 
         clearAllBeams()
-        _G["kill"] = false -- Disable kill if main script is off
+        _G["kill"] = false 
         _G.ScrapMasterLoop:Disconnect()
         _G.ScrapMasterLoop = nil
         return 
@@ -106,7 +107,6 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     end
 
     if enemyNearby then
-        -- ENABLE KILL SCRIPT
         if _G["kill"] ~= true then
             _G["kill"] = true
             task.spawn(function()
@@ -114,13 +114,11 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
                 if success then loadstring(code)() end
             end)
         end
-        clearAllBeams() -- Hide beams during combat for performance
-        return -- STOP SCRAP LOGIC WHILE KILLING
+        clearAllBeams() 
+        return 
     else
-        -- DISABLE KILL SCRIPT (No enemies nearby)
         if _G["kill"] == true then
             _G["kill"] = false
-            print("No enemies near. Resuming Scrap Master...")
         end
     end
 
@@ -149,15 +147,19 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     end
 
     -------------------------------------------------------
-    -- ၃။ HIT LOGIC (Scrap Only)
+    -- ၃။ HIT LOGIC (FIXED Pathing to Melee Folder)
     -------------------------------------------------------
     if tool and #pileTargets > 0 and tick() - lastSwing >= SWING_COOLDOWN then
-        local hitRemote = tool:FindFirstChild("HitTargets")
-        local swingRemote = tool:FindFirstChild("Swing")
-        if hitRemote and swingRemote then
-            hitRemote:FireServer(pileTargets)
-            swingRemote:FireServer()
-            lastSwing = tick()
+        -- Find Melee Folder inside Tool
+        local meleeFolder = tool:FindFirstChild("Melee")
+        if meleeFolder then
+            local hitRemote = meleeFolder:FindFirstChild("HitTargets")
+            local swingRemote = meleeFolder:FindFirstChild("Swing")
+            if hitRemote and swingRemote then
+                hitRemote:FireServer(pileTargets)
+                swingRemote:FireServer()
+                lastSwing = tick()
+            end
         end
     end
 
