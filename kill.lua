@@ -1,4 +1,4 @@
-
+-- [[ kill.lua - Instant Kill (Updated Pathing) ]] --
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
@@ -19,18 +19,22 @@ task.spawn(function()
             local tool = char:FindFirstChildOfClass("Tool")
             local charactersFolder = workspace:FindFirstChild("Characters")
             
-            if tool and charactersFolder then
-                local swingRemote = tool:FindFirstChild("Swing")
-                local hitRemote = tool:FindFirstChild("HitTargets")
+            -- Check for Tool and the Melee folder inside it
+            local meleeFolder = tool and tool:FindFirstChild("Melee")
+            
+            if meleeFolder and charactersFolder then
+                -- 2. Find Remotes inside the Melee folder
+                local swingRemote = meleeFolder:FindFirstChild("Swing")
+                local hitRemote = meleeFolder:FindFirstChild("HitTargets")
                 
                 if swingRemote and hitRemote then
-                    -- 2. Performance/Cooldown check
+                    -- 3. Performance/Cooldown check
                     if tick() - lastSwing >= SWING_COOLDOWN then
                         local myPos = char.PrimaryPart and char.PrimaryPart.Position
                         local targets = {}
                         local hitAny = false
 
-                        -- 3. Target Detection
+                        -- 4. Target Detection
                         if myPos then
                             for _, enemy in pairs(charactersFolder:GetChildren()) do
                                 if enemy:IsA("Model") and enemy ~= char then
@@ -48,7 +52,7 @@ task.spawn(function()
                             end
                         end
 
-                        -- 4. Attack Execution
+                        -- 5. Attack Execution
                         if hitAny then
                             hitRemote:FireServer(targets) -- Send damage to all in range
                             swingRemote:FireServer()      -- Play animation
@@ -58,7 +62,7 @@ task.spawn(function()
                 end
             end
         end
-        task.wait() -- Fast check (next frame)
+        task.wait() -- Fast check
     end
     
     print("Instant Kill: Activation Loop Stopped")
