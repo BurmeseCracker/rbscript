@@ -1,4 +1,4 @@
--- [[ trackerv2.lua - Scrap Master (FULL RESTORED + NON-CONFLICT) ]] --
+-- [[ trackerv2.lua - Scrap & Screws Master (FULL RESTORED) ]] --
 local scriptID = "trackerv2" 
 local GITHUB_URL = "https://raw.githubusercontent.com/BurmeseCracker/rbscript/refs/heads/main/kill.lua"
 
@@ -90,9 +90,8 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
                 if success then loadstring(code)() end
             end)
         end
-        -- Hide beams during combat for clear view
         for model, _ in pairs(_G.ScrapBeams) do removePath(model) end
-        return -- Skip Scrap logic while fighting
+        return 
     else
         _G["kill"] = false
     end
@@ -111,14 +110,12 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
                 if pPart then
                     local dist = (root.Position - pPart.Position).Magnitude
                     
-                    -- BEAM LOGIC
                     if dist <= TRACK_DIST then
                         createPath(pile, root, Color3.fromRGB(0, 255, 255))
                     else
                         removePath(pile)
                     end
 
-                    -- TARGET LOGIC
                     if dist <= ATTACK_RANGE then
                         table.insert(pileTargets, pile)
                     end
@@ -126,7 +123,6 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
             end
         end
 
-        -- SCRAP ATTACK LOGIC
         if tool and #pileTargets > 0 and tick() - lastSwing >= SWING_COOLDOWN then
             local container = tool:FindFirstChild("Melee") or tool
             local hr = container:FindFirstChild("HitTargets")
@@ -140,17 +136,17 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     end
 
     -------------------------------------------------------
-    -- ၃။ SILENT COLLECT (RESTORED)
+    -- ၃။ SILENT COLLECT (SCRAP + SCREWS)
     -------------------------------------------------------
     if DROP_FOLDER and PickUpRemote then
         for _, item in pairs(DROP_FOLDER:GetChildren()) do
-            if item.Name == "Scrap" and not processedItems[item] then
+            -- Added check for "Screws" here
+            if (item.Name == "Scrap" or item.Name == "Screws") and not processedItems[item] then
                 local iPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
                 if iPart and (root.Position - iPart.Position).Magnitude <= COLLECT_DIST then
                     processedItems[item] = true
                     task.spawn(function()
                         PickUpRemote:FireServer(item)
-                        -- Try to fire backpack remote if it exists
                         local adj = Remotes:FindFirstChild("Tools") and Remotes.Tools:FindFirstChild("AdjustBackpack")
                         if adj then adj:FireServer(item) end
                         
