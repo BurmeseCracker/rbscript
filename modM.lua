@@ -183,12 +183,7 @@ AddSection("SETTINGS MENU")
 AddToggle("Anti-lag", "anti-lag.lua")
 
 -- [ RESTART SCRIPTS BUTTON ]
-AddSettingsButton("RESTART SCRIPTS", Color3.fromRGB(255, 140, 0), function()
-    task.spawn(function()
-        local success, code = pcall(function() return game:HttpGet(base .. "restart.lua") end)
-        if success then loadstring(code)() end
-    end)
-end)
+
 
 AddSettingsButton("CLOSE & DESTROY", Color3.fromRGB(180, 0, 0), function()
     _G["speed"] = false; _G["noclip"] = false; _G["jump"] = false; _G["kill"] = false
