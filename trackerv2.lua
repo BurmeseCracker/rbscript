@@ -1,4 +1,4 @@
--- [[ trackerv2.lua - Scrap Master (NON-CONFLICT EDITION) ]] --
+-- [[ trackerv2.lua - Scrap Master (FULL RESTORED + NON-CONFLICT) ]] --
 local scriptID = "trackerv2" 
 local GITHUB_URL = "https://raw.githubusercontent.com/BurmeseCracker/rbscript/refs/heads/main/kill.lua"
 
@@ -23,6 +23,7 @@ local lastSwing = 0
 _G.ScrapBeams = _G.ScrapBeams or {} 
 local processedItems = {}
 
+-- [[ BEAM FUNCTIONS ]] --
 local function removePath(model)
     local data = _G.ScrapBeams[model]
     if data then
@@ -35,6 +36,22 @@ local function removePath(model)
     end
 end
 
+local function createPath(model, root, color)
+    if _G.ScrapBeams[model] then return end
+    local targetPart = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart") or model:FindFirstChild("Handle")
+    if not targetPart then return end
+
+    local attP = Instance.new("Attachment", root)
+    local attB = Instance.new("Attachment", targetPart)
+    local beam = Instance.new("Beam", root)
+    beam.Attachment0, beam.Attachment1 = attP, attB
+    beam.Color = ColorSequence.new(color)
+    beam.Width0, beam.Width1 = 0.35, 0.35
+    beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2; beam.FaceCamera = true
+    _G.ScrapBeams[model] = {beam = beam, aP = attP, aB = attB}
+end
+
+-- [[ MAIN LOOP ]] --
 if _G.ScrapMasterLoop then _G.ScrapMasterLoop:Disconnect() end
 
 _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
@@ -50,7 +67,7 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     if not root then return end
 
     -------------------------------------------------------
-    -- ၁။ ENEMY CHECK & AUTO-KILL
+    -- ၁။ ENEMY CHECK (AUTO-KILL TOGGLE)
     -------------------------------------------------------
     local enemyNearby = false
     if CHAR_FOLDER then
@@ -73,34 +90,43 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
                 if success then loadstring(code)() end
             end)
         end
-        -- STOP EVERYTHING ELSE IN THIS SCRIPT SO KILL.LUA CAN WORK
+        -- Hide beams during combat for clear view
         for model, _ in pairs(_G.ScrapBeams) do removePath(model) end
-        return 
+        return -- Skip Scrap logic while fighting
     else
         _G["kill"] = false
     end
 
     -------------------------------------------------------
-    -- ၂။ SCRAP PILES (Only runs if NO enemy is nearby)
+    -- ၂။ SCRAP PILES (BEAMS + ATTACK)
     -------------------------------------------------------
+    local currentModels = {}
     local pileTargets = {}
+    
     if PILE_FOLDER then
         for _, pile in pairs(PILE_FOLDER:GetChildren()) do
             if pile.Name == "Scrap Pile" then
+                currentModels[pile] = true
                 local pPart = pile.PrimaryPart or pile:FindFirstChildWhichIsA("BasePart")
                 if pPart then
                     local dist = (root.Position - pPart.Position).Magnitude
+                    
+                    -- BEAM LOGIC
                     if dist <= TRACK_DIST then
-                        -- Beam logic here...
-                        if dist <= ATTACK_RANGE then table.insert(pileTargets, pile) end
+                        createPath(pile, root, Color3.fromRGB(0, 255, 255))
                     else
                         removePath(pile)
+                    end
+
+                    -- TARGET LOGIC
+                    if dist <= ATTACK_RANGE then
+                        table.insert(pileTargets, pile)
                     end
                 end
             end
         end
 
-        -- SCRAP HIT LOGIC
+        -- SCRAP ATTACK LOGIC
         if tool and #pileTargets > 0 and tick() - lastSwing >= SWING_COOLDOWN then
             local container = tool:FindFirstChild("Melee") or tool
             local hr = container:FindFirstChild("HitTargets")
@@ -114,7 +140,7 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     end
 
     -------------------------------------------------------
-    -- ၃။ SILENT COLLECT
+    -- ၃။ SILENT COLLECT (RESTORED)
     -------------------------------------------------------
     if DROP_FOLDER and PickUpRemote then
         for _, item in pairs(DROP_FOLDER:GetChildren()) do
@@ -124,11 +150,22 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
                     processedItems[item] = true
                     task.spawn(function()
                         PickUpRemote:FireServer(item)
+                        -- Try to fire backpack remote if it exists
+                        local adj = Remotes:FindFirstChild("Tools") and Remotes.Tools:FindFirstChild("AdjustBackpack")
+                        if adj then adj:FireServer(item) end
+                        
                         task.wait(0.5)
                         processedItems[item] = nil
                     end)
                 end
             end
+        end
+    end
+
+    -- CLEANUP OLD BEAMS
+    for model, _ in pairs(_G.ScrapBeams) do
+        if not model or not model.Parent or (not currentModels[model]) then
+            removePath(model)
         end
     end
 end)
