@@ -1,4 +1,4 @@
--- [[ trackerv3.lua - Food Master (SMART PRIORITY TP + RETURN) ]] --
+-- [[ trackerv3.lua - Food Master (STABLE TP + NO VIBRATE) ]] --
 local scriptID = "trackerv3" 
 
 local Players = game:GetService("Players")
@@ -12,7 +12,7 @@ local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack"
 
 -- CONFIG
 local MAX_VISUAL_DIST = 100
-local COLLECT_RANGE = 40 -- Max distance to start the TP sequence
+local COLLECT_RANGE = 40 
 local TARGET_NAMES = { ["Chips"] = true, ["Bloxiade"] = true, ["Beans"] = true, ["Bloxy Cola"] = true, ["MRE"] = true}
 
 local v3Beams = {}
@@ -39,7 +39,7 @@ local function createV3Path(model, root)
     local attB = Instance.new("Attachment", targetPart)
     local beam = Instance.new("Beam", root)
     beam.Attachment0, beam.Attachment1 = attP, attB
-    beam.Color = ColorSequence.new(Color3.fromRGB(0, 255, 0)) -- Food is Green
+    beam.Color = ColorSequence.new(Color3.fromRGB(0, 255, 0)) 
     beam.Width0, beam.Width1 = 0.35, 0.35
     beam.Texture = "rbxassetid://44611181"; beam.TextureSpeed = 2.5; beam.FaceCamera = true
     v3Beams[model] = {beam = beam, aP = attP, aB = attB}
@@ -49,7 +49,6 @@ end
 if _G.TrackerV3Loop then _G.TrackerV3Loop:Disconnect() end
 
 _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
-    -- Check Menu Toggle
     if _G[scriptID] ~= true then 
         for model, _ in pairs(v3Beams) do removeV3Path(model) end
         return 
@@ -67,14 +66,12 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
             if targetPart then
                 local dist = (root.Position - targetPart.Position).Magnitude
                 
-                -- Track for Beams
                 if dist <= MAX_VISUAL_DIST then 
                     createV3Path(item, root) 
                 else
                     removeV3Path(item)
                 end
                 
-                -- Check for TP Range
                 if dist <= COLLECT_RANGE then 
                     table.insert(itemsInRange, {item = item, dist = dist, pos = targetPart.Position})
                 end
@@ -82,7 +79,6 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
         end
     end
 
-    -- Sort to find the CLOSEST food first
     table.sort(itemsInRange, function(a, b) return a.dist < b.dist end)
 
     local targetData = itemsInRange[1]
@@ -98,29 +94,31 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
             local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
             local startTime = tick()
             
-            -- TP and Fire Remote
-            while tick() - startTime < 0.8 do -- Slight duration for stability
+            -- TP sequence (Vibration-Free Logic)
+            while tick() - startTime < 0.6 do 
                 if not item or not item.Parent then break end
                 
+                -- Force Position and KILL Velocity (Prevents the "Vibrate" look)
                 root.CFrame = targetCFrame
-                root.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Stops physics lag
+                root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                 
                 if tick() - startTime < 0.1 then
                     AdjustRemote:FireServer(item)
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
                 end
                 RunService.RenderStepped:Wait()
             end
             
             -- [[ RETURN TO STARTING POSITION ]] --
             root.CFrame = originalPos
+            root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
             
-            task.wait(0.2)
+            task.wait(0.1)
             removeV3Path(item)
-            task.wait(1.5) -- Cooldown to prevent TP spam
+            task.wait(1.2) -- Cooldown
             processed[item] = nil
         end)
     end
 end)
 
-print("Food Master (Smart Priority + Auto Return) Loaded.")
+print("Food Master: Vibrate Fixed & Loaded.")
