@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
 -- Global variable ကို သုံးပြီး ON/OFF လုပ်မယ် (မင်းရဲ့ Menu နဲ့ ချိတ်ဖို့)
-_G.SpeedValue = 45 -- Default speed
+_G.SpeedValue = 30 -- Default speed
 
 if _G.SpeedLoop then _G.SpeedLoop:Disconnect() end
 
