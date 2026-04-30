@@ -1,17 +1,13 @@
--- [[ trackerv3.lua - Dual Remote PickUp (Priority) ]] --
+-- [[ trackerv3.lua - Food Master (Single-Action Lock) ]] --
 local scriptID = "trackerv3" 
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
-
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
-local CHAR_FOLDER = workspace:FindFirstChild("Characters")
 
--- Remotes
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
@@ -21,6 +17,7 @@ local TARGET_NAMES = { ["Chips"] = true, ["Bloxiade"] = true, ["Beans"] = true, 
 
 local v3Beams = {}
 local processed = {}
+local currentlyTeleporting = false -- Anti-loop toggle
 
 local function removeV3Path(model)
     local data = v3Beams[model]
@@ -63,80 +60,72 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
     if not root then return end
 
     local itemsInRange = {}
-    local allItems = {}
-
-    for _, v in pairs(SEARCH_FOLDER:GetChildren()) do table.insert(allItems, v) end
-    if CHAR_FOLDER then
-        for _, person in pairs(CHAR_FOLDER:GetChildren()) do
-            if person ~= char then
-                for _, item in pairs(person:GetChildren()) do
-                    table.insert(allItems, item)
-                end
-            end
-        end
-    end
-
-    for _, item in pairs(allItems) do
-        local inMyPossession = item:IsDescendantOf(char) or (player:FindFirstChild("Backpack") and item:IsDescendantOf(player.Backpack))
-        
-        if TARGET_NAMES[item.Name] and not processed[item] and not inMyPossession then
+    for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
+        if TARGET_NAMES[item.Name] and not processed[item] then
             local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")
             if targetPart then
                 local dist = (root.Position - targetPart.Position).Magnitude
                 
+                -- Always handle Beams regardless of TP state
                 if dist <= MAX_VISUAL_DIST then 
                     createV3Path(item, root) 
                 else
                     removeV3Path(item)
                 end
                 
-                local isHeldByOther = item:IsDescendantOf(CHAR_FOLDER)
-                if dist <= COLLECT_RANGE and not isHeldByOther then 
+                -- Only queue for TP if we aren't already busy with an item
+                if dist <= COLLECT_RANGE and not currentlyTeleporting then 
                     table.insert(itemsInRange, {item = item, dist = dist, pos = targetPart.Position})
                 end
             end
         end
     end
 
+    -- Sort to find the closest
     table.sort(itemsInRange, function(a, b) return a.dist < b.dist end)
-    local targetData = itemsInRange[1]
 
-    if targetData then
+    local targetData = itemsInRange[1]
+    if targetData and not currentlyTeleporting then
+        currentlyTeleporting = true -- Lock the script
         local item = targetData.item
         local pos = targetData.pos
         local originalPos = root.CFrame 
-        processed[item] = true
+        
+        processed[item] = true -- Mark item as handled immediately
         
         task.spawn(function()
             local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
             local startTime = tick()
             
-            while tick() - startTime < 0.5 do 
+            -- TP Sequence: Runs only once for this specific item
+            while tick() - startTime < 0.6 do 
                 if not item or not item.Parent then break end
-
+                
                 root.CFrame = targetCFrame
                 root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                 
                 if tick() - startTime < 0.1 then
-                    -- FIRE REMOTES IN ORDER
-                    pcall(function()
-                        PickUpRemote:InvokeServer(item) -- First: Interaction PickUp
-                        AdjustRemote:FireServer(item)   -- Second: Backpack Adjustment
-                    end)
+                    AdjustRemote:FireServer(item)
                 end
                 RunService.RenderStepped:Wait()
             end
             
+            -- Return to start
             root.CFrame = originalPos
             root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
             
             task.wait(0.1)
             removeV3Path(item)
-            task.wait(1.0)
+            
+            task.wait(1.2) -- Global cooldown before allowing next TP
+            currentlyTeleporting = false -- Unlock the script
+            
+            -- Item stays in 'processed' table for a while so we don't instantly try to grab it again if it failed
+            task.wait(5) 
             processed[item] = nil
         end)
     end
 end)
 
-print("Food Master: Dual Remote (PickUp -> Adjust) Loaded.")
+print("Food Master: Single-Target Lock Loaded.")
