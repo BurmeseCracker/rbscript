@@ -1,4 +1,4 @@
--- [[ trackerv3.lua - Simplified Backpack Check ]] --
+-- [[ trackerv3.lua - Dual Remote PickUp (Priority) ]] --
 local scriptID = "trackerv3" 
 
 local Players = game:GetService("Players")
@@ -9,7 +9,9 @@ local player = Players.LocalPlayer
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 local CHAR_FOLDER = workspace:FindFirstChild("Characters")
 
+-- Remotes
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local PickUpRemote = Remotes:WaitForChild("Interaction"):WaitForChild("PickUpItem")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
 
 -- CONFIG
@@ -47,15 +49,6 @@ local function createV3Path(model, root)
     v3Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
--- New Broad Check: Does the held tool name contain "Backpack"?
-local function isHoldingBackpack(char)
-    local tool = char and char:FindFirstChildWhichIsA("Tool")
-    if tool and string.find(tool.Name, "Backpack") then
-        return true
-    end
-    return false
-end
-
 -- [[ MAIN LOOP ]] --
 if _G.TrackerV3Loop then _G.TrackerV3Loop:Disconnect() end
 
@@ -67,11 +60,6 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    local backpackInv = player:FindFirstChild("Backpack")
-    
-    -- Check if you are holding any backpack
-    local holdingBackpack = isHoldingBackpack(char)
-    
     if not root then return end
 
     local itemsInRange = {}
@@ -89,7 +77,7 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
     end
 
     for _, item in pairs(allItems) do
-        local inMyPossession = item:IsDescendantOf(char) or (backpackInv and item:IsDescendantOf(backpackInv))
+        local inMyPossession = item:IsDescendantOf(char) or (player:FindFirstChild("Backpack") and item:IsDescendantOf(player.Backpack))
         
         if TARGET_NAMES[item.Name] and not processed[item] and not inMyPossession then
             local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")
@@ -102,9 +90,8 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
                     removeV3Path(item)
                 end
                 
-                -- ACTION CHECK
                 local isHeldByOther = item:IsDescendantOf(CHAR_FOLDER)
-                if dist <= COLLECT_RANGE and not isHeldByOther and holdingBackpack then 
+                if dist <= COLLECT_RANGE and not isHeldByOther then 
                     table.insert(itemsInRange, {item = item, dist = dist, pos = targetPart.Position})
                 end
             end
@@ -124,16 +111,19 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
             local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
             local startTime = tick()
             
-            while tick() - startTime < 0.6 do 
+            while tick() - startTime < 0.5 do 
                 if not item or not item.Parent then break end
-                if not isHoldingBackpack(char) then break end -- Stop if unequipped
 
                 root.CFrame = targetCFrame
                 root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                 
                 if tick() - startTime < 0.1 then
-                    AdjustRemote:FireServer(item)
+                    -- FIRE REMOTES IN ORDER
+                    pcall(function()
+                        PickUpRemote:InvokeServer(item) -- First: Interaction PickUp
+                        AdjustRemote:FireServer(item)   -- Second: Backpack Adjustment
+                    end)
                 end
                 RunService.RenderStepped:Wait()
             end
@@ -143,10 +133,10 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
             
             task.wait(0.1)
             removeV3Path(item)
-            task.wait(1.2)
+            task.wait(1.0)
             processed[item] = nil
         end)
     end
 end)
 
-print("Food Master: Broad Name Support Loaded. Hold a 'Backpack' tool to TP.")
+print("Food Master: Dual Remote (PickUp -> Adjust) Loaded.")
