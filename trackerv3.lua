@@ -1,4 +1,4 @@
--- [[ trackerv3.lua - Multi-Backpack Support ]] --
+-- [[ trackerv3.lua - Simplified Backpack Check ]] --
 local scriptID = "trackerv3" 
 
 local Players = game:GetService("Players")
@@ -8,8 +8,6 @@ local player = Players.LocalPlayer
 
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
 local CHAR_FOLDER = workspace:FindFirstChild("Characters")
--- The folder containing the valid backpack types
-local BACKPACK_TYPES_FOLDER = ReplicatedStorage:WaitForChild("Tools"):WaitForChild("Backpacks")
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
@@ -49,12 +47,11 @@ local function createV3Path(model, root)
     v3Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
--- Function to check if the held item is a valid backpack type
-local function isHoldingValidBackpack(char)
+-- New Broad Check: Does the held tool name contain "Backpack"?
+local function isHoldingBackpack(char)
     local tool = char and char:FindFirstChildWhichIsA("Tool")
-    if tool then
-        -- Check if a tool with this name exists in the ReplicatedStorage Backpacks folder
-        return BACKPACK_TYPES_FOLDER:FindFirstChild(tool.Name) ~= nil
+    if tool and string.find(tool.Name, "Backpack") then
+        return true
     end
     return false
 end
@@ -70,17 +67,16 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    local backpackInventory = player:FindFirstChild("Backpack")
+    local backpackInv = player:FindFirstChild("Backpack")
     
-    -- SMART CHECK: Are you holding ANY backpack from the allowed folder?
-    local holdingBackpack = isHoldingValidBackpack(char)
+    -- Check if you are holding any backpack
+    local holdingBackpack = isHoldingBackpack(char)
     
     if not root then return end
 
     local itemsInRange = {}
     local allItems = {}
 
-    -- Scan Ground and Others
     for _, v in pairs(SEARCH_FOLDER:GetChildren()) do table.insert(allItems, v) end
     if CHAR_FOLDER then
         for _, person in pairs(CHAR_FOLDER:GetChildren()) do
@@ -93,21 +89,20 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
     end
 
     for _, item in pairs(allItems) do
-        local inMyPossession = item:IsDescendantOf(char) or (backpackInventory and item:IsDescendantOf(backpackInventory))
+        local inMyPossession = item:IsDescendantOf(char) or (backpackInv and item:IsDescendantOf(backpackInv))
         
         if TARGET_NAMES[item.Name] and not processed[item] and not inMyPossession then
             local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")
             if targetPart then
                 local dist = (root.Position - targetPart.Position).Magnitude
                 
-                -- Visuals
                 if dist <= MAX_VISUAL_DIST then 
                     createV3Path(item, root) 
                 else
                     removeV3Path(item)
                 end
                 
-                -- Action (Only if holding a valid backpack)
+                -- ACTION CHECK
                 local isHeldByOther = item:IsDescendantOf(CHAR_FOLDER)
                 if dist <= COLLECT_RANGE and not isHeldByOther and holdingBackpack then 
                     table.insert(itemsInRange, {item = item, dist = dist, pos = targetPart.Position})
@@ -131,8 +126,7 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
             
             while tick() - startTime < 0.6 do 
                 if not item or not item.Parent then break end
-                -- If you unequip the backpack during TP, stop immediately
-                if not isHoldingValidBackpack(char) then break end
+                if not isHoldingBackpack(char) then break end -- Stop if unequipped
 
                 root.CFrame = targetCFrame
                 root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -155,4 +149,4 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Food Master: Multi-Backpack Support Loaded.")
+print("Food Master: Broad Name Support Loaded. Hold a 'Backpack' tool to TP.")
