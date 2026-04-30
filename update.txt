@@ -1,11 +1,6 @@
-New Update:(2026/04/13)
+New Update:(2026/04/30)
 
-• Disable Auto-Jump Function
-(To get Better GamePlay Experienced)
-• Add AirJump (Use Jump)
-• Fixed Collecting bugs
-• Add Instant Kill
-(Not Guns Yet)
+*Fixed Bugs*
 
 Modded by BTH
 
