@@ -1,11 +1,15 @@
--- [[ trackerv3.lua - Food Master (STABLE TP + NO VIBRATE) ]] --
+-- [[ trackerv3.lua - Multi-Backpack Support ]] --
 local scriptID = "trackerv3" 
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
+
 local SEARCH_FOLDER = workspace:WaitForChild("DroppedItems")
+local CHAR_FOLDER = workspace:FindFirstChild("Characters")
+-- The folder containing the valid backpack types
+local BACKPACK_TYPES_FOLDER = ReplicatedStorage:WaitForChild("Tools"):WaitForChild("Backpacks")
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local AdjustRemote = Remotes:WaitForChild("Tools"):WaitForChild("AdjustBackpack")
@@ -45,6 +49,16 @@ local function createV3Path(model, root)
     v3Beams[model] = {beam = beam, aP = attP, aB = attB}
 end
 
+-- Function to check if the held item is a valid backpack type
+local function isHoldingValidBackpack(char)
+    local tool = char and char:FindFirstChildWhichIsA("Tool")
+    if tool then
+        -- Check if a tool with this name exists in the ReplicatedStorage Backpacks folder
+        return BACKPACK_TYPES_FOLDER:FindFirstChild(tool.Name) ~= nil
+    end
+    return false
+end
+
 -- [[ MAIN LOOP ]] --
 if _G.TrackerV3Loop then _G.TrackerV3Loop:Disconnect() end
 
@@ -56,23 +70,46 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
 
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChild("Humanoid")
-    if not root or not hum then return end
+    local backpackInventory = player:FindFirstChild("Backpack")
+    
+    -- SMART CHECK: Are you holding ANY backpack from the allowed folder?
+    local holdingBackpack = isHoldingValidBackpack(char)
+    
+    if not root then return end
 
     local itemsInRange = {}
-    for _, item in pairs(SEARCH_FOLDER:GetChildren()) do
-        if TARGET_NAMES[item.Name] and not processed[item] then
+    local allItems = {}
+
+    -- Scan Ground and Others
+    for _, v in pairs(SEARCH_FOLDER:GetChildren()) do table.insert(allItems, v) end
+    if CHAR_FOLDER then
+        for _, person in pairs(CHAR_FOLDER:GetChildren()) do
+            if person ~= char then
+                for _, item in pairs(person:GetChildren()) do
+                    table.insert(allItems, item)
+                end
+            end
+        end
+    end
+
+    for _, item in pairs(allItems) do
+        local inMyPossession = item:IsDescendantOf(char) or (backpackInventory and item:IsDescendantOf(backpackInventory))
+        
+        if TARGET_NAMES[item.Name] and not processed[item] and not inMyPossession then
             local targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")
             if targetPart then
                 local dist = (root.Position - targetPart.Position).Magnitude
                 
+                -- Visuals
                 if dist <= MAX_VISUAL_DIST then 
                     createV3Path(item, root) 
                 else
                     removeV3Path(item)
                 end
                 
-                if dist <= COLLECT_RANGE then 
+                -- Action (Only if holding a valid backpack)
+                local isHeldByOther = item:IsDescendantOf(CHAR_FOLDER)
+                if dist <= COLLECT_RANGE and not isHeldByOther and holdingBackpack then 
                     table.insert(itemsInRange, {item = item, dist = dist, pos = targetPart.Position})
                 end
             end
@@ -80,13 +117,11 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
     end
 
     table.sort(itemsInRange, function(a, b) return a.dist < b.dist end)
-
     local targetData = itemsInRange[1]
+
     if targetData then
         local item = targetData.item
         local pos = targetData.pos
-        
-        -- [[ SAVE ORIGINAL POSITION ]] --
         local originalPos = root.CFrame 
         processed[item] = true
         
@@ -94,11 +129,11 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
             local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
             local startTime = tick()
             
-            -- TP sequence (Vibration-Free Logic)
             while tick() - startTime < 0.6 do 
                 if not item or not item.Parent then break end
-                
-                -- Force Position and KILL Velocity (Prevents the "Vibrate" look)
+                -- If you unequip the backpack during TP, stop immediately
+                if not isHoldingValidBackpack(char) then break end
+
                 root.CFrame = targetCFrame
                 root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
@@ -109,16 +144,15 @@ _G.TrackerV3Loop = RunService.Heartbeat:Connect(function()
                 RunService.RenderStepped:Wait()
             end
             
-            -- [[ RETURN TO STARTING POSITION ]] --
             root.CFrame = originalPos
             root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
             
             task.wait(0.1)
             removeV3Path(item)
-            task.wait(1.2) -- Cooldown
+            task.wait(1.2)
             processed[item] = nil
         end)
     end
 end)
 
-print("Food Master: Vibrate Fixed & Loaded.")
+print("Food Master: Multi-Backpack Support Loaded.")
