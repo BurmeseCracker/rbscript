@@ -1,4 +1,4 @@
--- [[ trackerv2.lua - Scrap & Screws Master (FULL RESTORED) ]] --
+-- [[ trackerv2.lua - Scrap & Screws Master (FULL FIX) ]] --
 local scriptID = "trackerv2" 
 local GITHUB_URL = "https://raw.githubusercontent.com/BurmeseCracker/rbscript/refs/heads/main/kill.lua"
 
@@ -7,16 +7,25 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
-local DROP_FOLDER = workspace:FindFirstChild("DroppedItems") or workspace:FindFirstChild("Items")
-local PILE_FOLDER = workspace:FindFirstChild("Structures") or (workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Crates"))
-local CHAR_FOLDER = workspace:FindFirstChild("Characters")
+-- Better Folder Detection
+local function findFolder(names)
+    for _, name in pairs(names) do
+        local f = workspace:FindFirstChild(name)
+        if f then return f end
+    end
+    return nil
+end
+
+local DROP_FOLDER = findFolder({"DroppedItems", "Items", "Debris"})
+local PILE_FOLDER = findFolder({"Structures", "Map", "Crates", "Interactables"})
+local CHAR_FOLDER = findFolder({"Characters", "Players", "NPCs"})
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 5)
 local PickUpRemote = Remotes and Remotes:FindFirstChild("Interaction") and Remotes.Interaction:FindFirstChild("PickUpItem")
 
 local TRACK_DIST = 100    
-local COLLECT_DIST = 18   
-local ATTACK_RANGE = 40    
+local COLLECT_DIST = 20 -- Increased slightly for reliability
+local ATTACK_RANGE = 50 -- Matches your kill script range   
 local SWING_COOLDOWN = 0.1
 local lastSwing = 0
 
@@ -57,7 +66,6 @@ if _G.ScrapMasterLoop then _G.ScrapMasterLoop:Disconnect() end
 _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     if _G[scriptID] ~= true then 
         for model, _ in pairs(_G.ScrapBeams) do removePath(model) end
-        _G["kill"] = false 
         return 
     end
 
@@ -67,16 +75,19 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     if not root then return end
 
     -------------------------------------------------------
-    -- ၁။ ENEMY CHECK (AUTO-KILL TOGGLE)
+    -- 1. ENEMY CHECK (AUTO-KILL TOGGLE)
     -------------------------------------------------------
     local enemyNearby = false
     if CHAR_FOLDER then
         for _, enemy in pairs(CHAR_FOLDER:GetChildren()) do
-            if enemy ~= char and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+            if enemy ~= char and enemy:IsA("Model") then
+                local eHum = enemy:FindFirstChildOfClass("Humanoid")
                 local eRoot = enemy:FindFirstChild("HumanoidRootPart")
-                if eRoot and (root.Position - eRoot.Position).Magnitude <= ATTACK_RANGE then
-                    enemyNearby = true
-                    break
+                if eRoot and eHum and eHum.Health > 0 then
+                    if (root.Position - eRoot.Position).Magnitude <= ATTACK_RANGE then
+                        enemyNearby = true
+                        break
+                    end
                 end
             end
         end
@@ -90,6 +101,7 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
                 if success then loadstring(code)() end
             end)
         end
+        -- Hide beams when fighting to reduce lag
         for model, _ in pairs(_G.ScrapBeams) do removePath(model) end
         return 
     else
@@ -97,16 +109,16 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     end
 
     -------------------------------------------------------
-    -- ၂။ SCRAP PILES (BEAMS + ATTACK)
+    -- 2. SCRAP PILES (BEAMS + ATTACK)
     -------------------------------------------------------
     local currentModels = {}
     local pileTargets = {}
     
     if PILE_FOLDER then
-        for _, pile in pairs(PILE_FOLDER:GetChildren()) do
-            if pile.Name == "Scrap Pile" then
+        for _, pile in pairs(PILE_FOLDER:GetDescendants()) do -- Use GetDescendants to find deep piles
+            if pile.Name == "Scrap Pile" or pile:FindFirstChild("Scrap") then
                 currentModels[pile] = true
-                local pPart = pile.PrimaryPart or pile:FindFirstChildWhichIsA("BasePart")
+                local pPart = pile:IsA("BasePart") and pile or pile.PrimaryPart or pile:FindFirstChildWhichIsA("BasePart")
                 if pPart then
                     local dist = (root.Position - pPart.Position).Magnitude
                     
@@ -136,23 +148,26 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
     end
 
     -------------------------------------------------------
-    -- ၃။ SILENT COLLECT (SCRAP + SCREWS)
+    -- 3. SILENT COLLECT (SCRAP + SCREWS)
     -------------------------------------------------------
     if DROP_FOLDER and PickUpRemote then
         for _, item in pairs(DROP_FOLDER:GetChildren()) do
-            -- Added check for "Screws" here
             if (item.Name == "Scrap" or item.Name == "Screws") and not processedItems[item] then
-                local iPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
-                if iPart and (root.Position - iPart.Position).Magnitude <= COLLECT_DIST then
-                    processedItems[item] = true
-                    task.spawn(function()
-                        PickUpRemote:FireServer(item)
-                        local adj = Remotes:FindFirstChild("Tools") and Remotes.Tools:FindFirstChild("AdjustBackpack")
-                        if adj then adj:FireServer(item) end
-                        
-                        task.wait(0.5)
-                        processedItems[item] = nil
-                    end)
+                local iPart = item:IsA("BasePart") and item or item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+                if iPart then
+                    local dist = (root.Position - iPart.Position).Magnitude
+                    if dist <= COLLECT_DIST then
+                        processedItems[item] = true
+                        task.spawn(function()
+                            PickUpRemote:FireServer(item)
+                            -- Force adjustment remote if it exists
+                            local adj = Remotes:FindFirstChild("Tools") and Remotes.Tools:FindFirstChild("AdjustBackpack")
+                            if adj then adj:FireServer(item) end
+                            
+                            task.wait(0.5)
+                            processedItems[item] = nil
+                        end)
+                    end
                 end
             end
         end
@@ -165,3 +180,5 @@ _G.ScrapMasterLoop = RunService.Heartbeat:Connect(function()
         end
     end
 end)
+
+print("Scrap & Screws Master: Fully Fixed & Optimized.")
