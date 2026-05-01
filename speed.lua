@@ -33,7 +33,7 @@ local function Notify(text)
 end
 
 -- Global Setup
-_G.SpeedValue = 26
+_G.SpeedValue = 27
 
 if _G.SpeedLoop then _G.SpeedLoop:Disconnect() end
 
