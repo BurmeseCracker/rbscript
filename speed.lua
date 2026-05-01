@@ -5,7 +5,7 @@ local CoreGui = game:GetService("CoreGui")
 local player = Players.LocalPlayer
 
 -- CONFIG
-_G.SpeedValue = 0.45 -- Adjust this (0.1 to 0.8 is the "Safe Zone" for bypass)
+_G.SpeedValue = 30 -- Adjust this (0.1 to 0.8 is the "Safe Zone" for bypass)
 local scriptID = "speed"
 
 -- Function to create a Toast Message
