@@ -94,7 +94,7 @@ _G.BatteryMasterLoop = RunService.Heartbeat:Connect(function()
             local targetCFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
             local startTime = tick()
             
-            while tick() - startTime < 1 do
+            while tick() - startTime < 0.3 do
                 if not item or not item.Parent then break end
                 
                 root.CFrame = targetCFrame
