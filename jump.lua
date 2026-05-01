@@ -1,4 +1,4 @@
--- [[ JumpPower, AirWalk & InfJump - Fixed & Polished ]] --
+-- [[ Sky Climber - Continuous Air Jump Edition ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -8,7 +8,7 @@ local player = Players.LocalPlayer
 local DEFAULT_JUMP_POWER = 50 
 local PLATFORM_SIZE = Vector3.new(8, 0.5, 8) 
 
--- Script IDs (Check these match your UI Toggle Names)
+-- Script IDs
 local jumpToggle = "jump" 
 local airWalkToggle = "air_walk"
 local infJumpToggle = "inf_jump"
@@ -29,7 +29,7 @@ local function getAirPart()
     return airPart
 end
 
--- [[ Infinite Jump Logic ]] --
+-- [[ FIXED Continuous Infinite Jump Logic ]] --
 UserInputService.JumpRequest:Connect(function()
     if _G[infJumpToggle] == true then
         local char = player.Character
@@ -37,16 +37,12 @@ UserInputService.JumpRequest:Connect(function()
         local root = char and char:FindFirstChild("HumanoidRootPart")
         
         if hum and root then
-            -- Force the Jumping state
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            -- Reset vertical velocity immediately to prevent "falling momentum" from stopping the jump
+            root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, 0, root.AssemblyLinearVelocity.Z)
             
-            -- Apply upward velocity (Normal Jump Strength)
-            root.AssemblyLinearVelocity = Vector3.new(
-                root.AssemblyLinearVelocity.X, 
-                DEFAULT_JUMP_POWER, 
-                root.AssemblyLinearVelocity.Z
-            )
-            -- print("Jumping...") -- Uncomment to test if the toggle works
+            -- Force jump state and apply upward force
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, DEFAULT_JUMP_POWER, root.AssemblyLinearVelocity.Z)
         end
     end
 end)
@@ -56,7 +52,6 @@ local function applyLogic(character)
     local humanoid = character:WaitForChild("Humanoid")
     local root = character:WaitForChild("HumanoidRootPart")
     
-    -- Using a named function for the connection so we can manage it better
     local connection
     connection = RunService.Heartbeat:Connect(function()
         if not character or not character.Parent or not humanoid then
@@ -67,6 +62,7 @@ local function applyLogic(character)
         -- 1. JUMP POWER LOGIC
         if _G[jumpToggle] == true then
             humanoid.UseJumpPower = true
+            -- Keep it locked at 50 so every jump is the same height
             if humanoid.JumpPower ~= DEFAULT_JUMP_POWER then
                 humanoid.JumpPower = DEFAULT_JUMP_POWER 
             end
@@ -75,6 +71,7 @@ local function applyLogic(character)
         -- 2. AIR WALK LOGIC
         if _G[airWalkToggle] == true then
             local part = getAirPart()
+            -- Sync platform position slightly below the root part
             part.CFrame = root.CFrame * CFrame.new(0, -3.8, 0)
         else
             if airPart then
@@ -85,13 +82,8 @@ local function applyLogic(character)
     end)
 end
 
--- Monitor for Character
-player.CharacterAdded:Connect(function(newChar)
-    applyLogic(newChar)
-end)
+-- Character Monitoring
+player.CharacterAdded:Connect(applyLogic)
+if player.Character then applyLogic(player.Character) end
 
-if player.Character then
-    applyLogic(player.Character)
-end
-
-print("Sky Climber: Ready. Ensure _G variables are set to 'true' in your menu.")
+print("Sky Climber: Ready. Infinite jumping is now forced.")
