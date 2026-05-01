@@ -1,16 +1,15 @@
--- [[ JumpPower, AirWalk & InfJump - Sync with Menu Toggle ]] --
+-- [[ JumpPower (Normal), AirWalk & InfJump - Sky Climber Edition ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
 -- CONFIG
-local JUMP_POWER_CUSTOM = 150 
-local DEFAULT_JUMP_POWER = 50
+local DEFAULT_JUMP_POWER = 50 -- Standard Roblox Jump
 local PLATFORM_SIZE = Vector3.new(8, 0.5, 8) 
 
--- Script IDs (Menu Config နဲ့ တူရမယ်)
-local jumpToggle = "jump"
+-- Script IDs
+local jumpToggle = "jump" -- Keep this to toggle between custom and normal
 local airWalkToggle = "air_walk"
 local infJumpToggle = "inf_jump"
 
@@ -30,13 +29,25 @@ local function getAirPart()
     return airPart
 end
 
--- [[ Infinite Jump Logic ]] --
+-- [[ UPDATED Infinite Jump Logic ]] --
+-- This version allows you to climb "up and up" using normal jump height
 UserInputService.JumpRequest:Connect(function()
     if _G[infJumpToggle] == true then
         local char = player.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        
+        if hum and root then
+            -- Reset state to allow a fresh jump mid-air
             hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            
+            -- Set the vertical velocity to match a normal jump (approx 50 velocity)
+            -- This makes every air-jump feel exactly like a ground-jump
+            root.AssemblyLinearVelocity = Vector3.new(
+                root.AssemblyLinearVelocity.X, 
+                DEFAULT_JUMP_POWER, 
+                root.AssemblyLinearVelocity.Z
+            )
         end
     end
 end)
@@ -46,22 +57,22 @@ local function applyLogic(character)
     local humanoid = character:WaitForChild("Humanoid")
     local root = character:WaitForChild("HumanoidRootPart")
     
-    -- Main Loop
-    RunService.Heartbeat:Connect(function()
-        -- 1. JUMP POWER LOGIC
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        if not character or not character.Parent then
+            connection:Disconnect()
+            return
+        end
+
+        -- 1. JUMP POWER LOGIC (Force Normal)
+        -- Even if the game tries to nerf your jump, this keeps it at 50
         if _G[jumpToggle] == true then
             humanoid.UseJumpPower = true
-            humanoid.JumpPower = JUMP_POWER_CUSTOM
-        else
-            -- Reset to 50 when OFF
-            if humanoid.JumpPower ~= DEFAULT_JUMP_POWER then
-                humanoid.JumpPower = DEFAULT_JUMP_POWER
-                humanoid.UseJumpPower = false
-            end
+            humanoid.JumpPower = DEFAULT_JUMP_POWER 
         end
 
         -- 2. AIR WALK LOGIC
-        if _G[airWalkToggle] == true and character and character.Parent and root then
+        if _G[airWalkToggle] == true and root then
             local part = getAirPart()
             part.CFrame = root.CFrame * CFrame.new(0, -3.8, 0)
         else
@@ -69,13 +80,6 @@ local function applyLogic(character)
                 airPart:Destroy()
                 airPart = nil
             end
-        end
-    end)
-
-    -- Force JumpPower if game tries to change it back while ON
-    humanoid:GetPropertyChangedSignal("JumpPower"):Connect(function()
-        if _G[jumpToggle] == true and humanoid.JumpPower ~= JUMP_POWER_CUSTOM then
-            humanoid.JumpPower = JUMP_POWER_CUSTOM
         end
     end)
 end
@@ -87,4 +91,4 @@ end
 
 player.CharacterAdded:Connect(applyLogic)
 
-print("Jump, AirWalk & Infinite Jump: Loaded.")
+print("Sky Climber: Normal JumpPower + Infinite Jump Loaded.")
